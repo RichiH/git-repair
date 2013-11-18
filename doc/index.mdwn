@@ -3,17 +3,21 @@
 It is a complement to `git fsck`, which finds problems, but does not fix
 them.
 
+## download
+
+	git clone git://git-repair.branchable.com/ git-repair
+
 ## install
 
 This is a Haskell program, developed as a spinoff of
 [git-annex](http://git-annex.branchable.com/).
 
-You can clone the source `git clone git://git-repair.branchable.com/ git-repair`
-
 To build it, you will need to install the
 [Haskell Platform](http://www.haskell.org/platform/).
 
-Then you can run `cabal update; cabal install git-repair --bindir=$HOME/bin`
+Then to install it:
+
+	cabal update; cabal install git-repair --bindir=$HOME/bin
 
 ## how it works
 
