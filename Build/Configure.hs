@@ -7,11 +7,13 @@ import Control.Applicative
 import Control.Monad.IfElse
 
 import Build.TestConfig
+import Build.Version
 import Git.Version
 
 tests :: [TestCase]
 tests =
-	[ TestCase "git" $ requireCmd "git" "git --version >/dev/null"
+	[ TestCase "version" getVersion
+	, TestCase "git" $ requireCmd "git" "git --version >/dev/null"
 	, TestCase "git version" getGitVersion
 	, TestCase "nice" $ testCmd "nice" "nice true >/dev/null"
 	]
@@ -25,3 +27,5 @@ run ts = do
 	args <- getArgs
 	config <- runTests ts
 	writeSysConfig config
+	whenM (isReleaseBuild) $
+		cabalSetup "github-repair.cabal"
