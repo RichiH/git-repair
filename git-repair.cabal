@@ -8,7 +8,7 @@ Stability: Stable
 Copyright: 2013 Joey Hess
 License-File: GPL
 Build-Type: Custom
-Homepage: http://git-reair.branchable.com/
+Homepage: http://git-repair.branchable.com/
 Category: Utility
 Synopsis: repairs a damanged git repisitory
 Description:
