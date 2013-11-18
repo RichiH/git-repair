@@ -28,4 +28,4 @@ run ts = do
 	config <- runTests ts
 	writeSysConfig config
 	whenM (isReleaseBuild) $
-		cabalSetup "github-repair.cabal"
+		cabalSetup "git-repair.cabal"
