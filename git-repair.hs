@@ -5,34 +5,36 @@
  - Licensed under the GNU GPL version 3 or higher.
  -}
 
-import System.Environment
 import Data.Tuple.Utils
+import Options.Applicative
 
 import Common
 import qualified Git.CurrentRepo
 import qualified Git.Repair
 import qualified Git.Config
 
-header :: String
-header = "Usage: git-repair"
+data Settings = Settings
+	{ forced :: Bool
+	}
 
-usage :: a
-usage = error $ "bad parameters\n\n" ++ header
-
-parseArgs :: IO Bool
-parseArgs = do
-	args <- getArgs
-	return $ or $ map parse args
+parseSettings :: Parser Settings
+parseSettings = Settings
+	<$> switch forceopt
   where
-	parse "--force" = True
-	parse _ = usage
+	forceopt = long "force"
+		<> help "Force recovery, even if data is lost"
 
 main :: IO ()
-main = do
-	forced <- parseArgs
-	
+main = execParser opts >>= repair
+  where
+  	opts = info (helper <*> parseSettings) desc
+	desc = fullDesc
+		<> header "git-repair - repair a damanged git repository" 
+
+repair :: Settings -> IO ()
+repair settings = do
 	g <- Git.Config.read =<< Git.CurrentRepo.get
-	ifM (fst3 <$> Git.Repair.runRepair forced g)
+	ifM (fst3 <$> Git.Repair.runRepair (forced settings) g)
 		( exitSuccess
 		, exitFailure
 		)

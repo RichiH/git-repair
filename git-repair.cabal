@@ -23,7 +23,7 @@ Executable git-repair
   Build-Depends: MissingH, hslogger, directory, filepath, containers, mtl,
    network, extensible-exceptions, unix-compat, bytestring,
    base >= 4.5, base < 5, IfElse, text, process,
-   utf8-string, async
+   utf8-string, async, optparse-applicative
 
   if (! os(windows))
     Build-Depends: unix
