@@ -43,4 +43,4 @@ longer usable due to missing data, so fack may also find problems with
 tags.
 
 Since this command unpacks all packs in the repository, you may want to
-run `git gc`afterwards.
+run `git gc` afterwards.
