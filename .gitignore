@@ -1,3 +1,5 @@
 Build/SysConfig.hs
 tags
 git-repair
+test-runner
+test-runner.log

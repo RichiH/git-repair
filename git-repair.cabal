@@ -28,6 +28,18 @@ Executable git-repair
   if (! os(windows))
     Build-Depends: unix
 
+Executable test-runner
+  Main-Is: test-runner.hs
+  GHC-Options: -Wall
+  Build-Depends: MissingH, hslogger, directory, filepath, containers, mtl,
+   network, extensible-exceptions, unix-compat, bytestring,
+   base >= 4.5, base < 5, IfElse, text, process,
+   utf8-string, async, optparse-applicative,
+   QuickCheck >= 2.1, time
+
+  if (! os(windows))
+    Build-Depends: unix
+
 source-repository head
   type: git
   location: git://git-repair.branchable.com/

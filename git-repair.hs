@@ -5,7 +5,6 @@
  - Licensed under the GNU GPL version 3 or higher.
  -}
 
-import Data.Tuple.Utils
 import Options.Applicative
 
 import Common
@@ -22,7 +21,7 @@ parseSettings = Settings
 	<$> switch forceopt
   where
 	forceopt = long "force"
-		<> help "Force recovery, even if data is lost"
+		<> help "Force repair, even if data is lost"
 
 main :: IO ()
 main = execParser opts >>= repair
@@ -34,7 +33,7 @@ main = execParser opts >>= repair
 repair :: Settings -> IO ()
 repair settings = do
 	g <- Git.Config.read =<< Git.CurrentRepo.get
-	ifM (fst3 <$> Git.Repair.runRepair (forced settings) g)
+	ifM (Git.Repair.successfulRepair <$> Git.Repair.runRepair (forced settings) g)
 		( exitSuccess
 		, exitFailure
 		)
