@@ -66,7 +66,9 @@ instance Arbitrary FileSelector where
 selectFile :: [FilePath] -> FileSelector -> FilePath
 selectFile sortedfs (FileSelector n) = sortedfs !! (n `mod` length sortedfs)
 
-{-  Generates random Damage. -}
+{- Generates random Damage.
+ -
+ - TODO: sample' only seems to go up to 20 for files? -}
 generateDamage :: IO [Damage]
 generateDamage = sample' (arbitrary :: Gen Damage)
 
@@ -81,9 +83,8 @@ applyDamage l r = do
 		-- If the file was already removed by a previous Damage,
 		-- it's skipped.
 		whenM (doesFileExist f) $
-			withModifiedFileMode f (addModes [ownerWriteMode]) $
-				applyDamageAction action f
-					`catchIO` \e -> error ("Failed to apply " ++ show action ++ " " ++ show f ++ ": " ++ show e)
+			applyDamageAction action f
+				`catchIO` \e -> error ("Failed to apply " ++ show action ++ " " ++ show f ++ ": " ++ show e ++ "(total damage: " ++ show l ++ ")")
 
 applyDamageAction :: DamageAction -> FilePath -> IO ()
 applyDamageAction Empty f = changeFile f $ do
@@ -99,7 +100,7 @@ applyDamageAction (PrependGarbage garbage) f = changeFile f $ do
 	B.writeFile f $ B.concat [garbage, b]
 -- When the byte is past the end of the file, wrap around.
 -- Does nothing to empty file.
-applyDamageAction (CorruptByte n garbage) f = do
+applyDamageAction (CorruptByte n garbage) f = changeFile f $ do
 	b <- B.readFile f
 	let len = B.length b
 	unless (len == 0) $ do
