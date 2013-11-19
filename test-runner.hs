@@ -19,25 +19,45 @@ import Utility.Tmp
 data Settings = Settings
 	{ originalGitRepo :: FilePath
 	, forced :: Bool
+	, retryMode :: Bool
 	}
 
 parseSettings :: Parser Settings
 parseSettings = Settings
 	<$> argument str (metavar "REPO")
         <*> switch forceopt
+	<*> switch retryopt
   where
 	forceopt = long "force"
 		<> help "Force repair"
+	retryopt = long "retry"
+		<> help "Retry tests in test-runner.log"
 
 main :: IO ()
-main = execParser opts >>= runTest
+main = execParser opts >>= run
   where
 	opts = info (helper <*> parseSettings) desc
 	desc = fullDesc
 		<> header "test-runner - test command in corrupted git repository"
 
-runTest :: Settings -> IO ()
-runTest settings = withTmpDir "tmprepo" $ \tmpdir -> do
+run :: Settings -> IO ()
+run settings
+	| retryMode settings = do
+		l <- map Prelude.read . lines <$> readFile logFile
+		rs <- forM l $ \damage -> 
+			runTest settings damage >>= showTestResult
+		exitBool $ and rs
+	| otherwise = runRandomTest settings
+
+runRandomTest :: Settings -> IO ()
+runRandomTest settings = do
+	damage <- Git.Destroyer.generateDamage
+	logDamage damage
+	result <- runTest settings damage
+	showTestResult result >>= exitBool
+
+runTest :: Settings -> [Git.Destroyer.Damage] -> IO TestResult
+runTest settings damage = withTmpDir "tmprepo" $ \tmpdir -> do
 	let cloneloc = tmpdir </> "clone"
 	cloned <- boolSystem "git"
 		[ Param "clone"
@@ -47,39 +67,37 @@ runTest settings = withTmpDir "tmprepo" $ \tmpdir -> do
 		]
 	unless cloned $
 		error $ "failed to clone " ++ originalGitRepo settings
-	-- Note that we read the config before destroying the repo.
-	-- Recovering from repos with a corrupted config is not currently
-	-- a goal.
 	g <- Git.Config.read =<< Git.Construct.fromPath cloneloc
-	damage <- Git.Destroyer.generateDamage
 	Git.Destroyer.applyDamage damage g
-	result <- catchMaybeIO $ Git.Repair.successfulRepair
+	repairstatus <- catchMaybeIO $ Git.Repair.successfulRepair
 		<$> Git.Repair.runRepair (forced settings) g
-	case result of
-		Just True -> do
-			fsckok <- not . Git.Fsck.foundBroken
-				<$> Git.Fsck.findBroken False g
-			logTest damage result (Just fsckok)
-			if fsckok
-				then do
-					putStrLn "** repair succeeded"
-					exitSuccess
-				else do
-					putStrLn "** repair succeeded, but final fsck failed"
-					exitFailure
-		_ -> do
-			logTest damage result Nothing
-			putStrLn "** repair failed"
-			exitFailure
+	case repairstatus of
+		Just True -> TestResult damage repairstatus 
+			. Just . not . Git.Fsck.foundBroken
+			<$> Git.Fsck.findBroken False g
+		_ -> return $ TestResult damage repairstatus Nothing
 
-data TestLog = TestLog
-	{ damagelist :: [Git.Destroyer.Damage]
-	, resut :: Maybe Bool
-	, fsckresult ::  Maybe Bool
+data TestResult = TestResult
+	{ damageList :: [Git.Destroyer.Damage]
+	, repairResult :: Maybe Bool
+	, fsckResult ::  Maybe Bool
 	}
 	deriving (Read, Show)
 
-logTest :: [Git.Destroyer.Damage] -> Maybe Bool -> Maybe Bool -> IO ()
-logTest damage result fsckok =
-	appendFile "test-runner.log" $
-		show (TestLog damage result fsckok) ++ "\n"
+showTestResult :: TestResult -> IO Bool
+showTestResult testresult = case (repairResult testresult, fsckResult testresult) of
+	(Just True, Just True) -> do
+		putStrLn "** repair succeeded"
+		return True
+	(Just True, Just False) -> do
+		putStrLn "** repair succeeded, but final fsck failed"
+		return False
+	_ -> do
+		putStrLn "** repair failed"
+		return True
+
+logDamage :: [Git.Destroyer.Damage] -> IO ()
+logDamage damage = appendFile logFile $ show damage ++ "\n"
+
+logFile :: FilePath
+logFile = "test-runner.log"

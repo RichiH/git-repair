@@ -87,20 +87,20 @@ applyDamage l r = do
 				`catchIO` \e -> error ("Failed to apply " ++ show action ++ " " ++ show f ++ ": " ++ show e ++ "(total damage: " ++ show l ++ ")")
 
 applyDamageAction :: DamageAction -> FilePath -> IO ()
-applyDamageAction Empty f = changeFile f $ do
+applyDamageAction Empty f = withSaneMode f $ do
 	nukeFile f
 	writeFile f ""
-applyDamageAction Reverse f = changeFile f $
+applyDamageAction Reverse f = withSaneMode f $
 	B.writeFile f =<< B.reverse <$> B.readFile f
 applyDamageAction Delete f = nukeFile f
-applyDamageAction (AppendGarbage garbage) f = changeFile f $
+applyDamageAction (AppendGarbage garbage) f = withSaneMode f $
 	B.appendFile f garbage
-applyDamageAction (PrependGarbage garbage) f = changeFile f $ do
+applyDamageAction (PrependGarbage garbage) f = withSaneMode f $ do
 	b <- B.readFile f
 	B.writeFile f $ B.concat [garbage, b]
 -- When the byte is past the end of the file, wrap around.
 -- Does nothing to empty file.
-applyDamageAction (CorruptByte n garbage) f = changeFile f $ do
+applyDamageAction (CorruptByte n garbage) f = withSaneMode f $ do
 	b <- B.readFile f
 	let len = B.length b
 	unless (len == 0) $ do
@@ -113,6 +113,5 @@ applyDamageAction (CorruptByte n garbage) f = changeFile f $ do
 			]
 applyDamageAction (ScrambleFileMode mode) f = setFileMode f mode
 
--- Files in git are often not writable, so fix up mode temporarily.
-changeFile :: FilePath -> IO () -> IO ()
-changeFile f = withModifiedFileMode f (addModes [ownerWriteMode])
+withSaneMode :: FilePath -> IO () -> IO ()
+withSaneMode f = withModifiedFileMode f (addModes [ownerWriteMode, ownerReadMode])
