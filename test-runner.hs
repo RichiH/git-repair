@@ -13,6 +13,7 @@ import qualified Git.Construct
 import qualified Git.Config
 import qualified Git.Destroyer
 import qualified Git.Repair
+import qualified Git.Fsck
 import Utility.Tmp
 
 data Settings = Settings
@@ -54,14 +55,31 @@ runTest settings = withTmpDir "tmprepo" $ \tmpdir -> do
 	Git.Destroyer.applyDamage damage g
 	result <- catchMaybeIO $ Git.Repair.successfulRepair
 		<$> Git.Repair.runRepair (forced settings) g
-	logTest damage result
 	case result of
-		Just True -> exitSuccess
-		_ -> exitFailure
+		Just True -> do
+			fsckok <- not . Git.Fsck.foundBroken
+				<$> Git.Fsck.findBroken False g
+			logTest damage result (Just fsckok)
+			if fsckok
+				then do
+					putStrLn "** repair succeeded"
+					exitSuccess
+				else do
+					putStrLn "** repair succeeded, but final fsck failed"
+					exitFailure
+		_ -> do
+			logTest damage result Nothing
+			putStrLn "** repair failed"
+			exitFailure
 
-data TestLog = TestLog [Git.Destroyer.Damage] (Maybe Bool)
+data TestLog = TestLog
+	{ damagelist :: [Git.Destroyer.Damage]
+	, resut :: Maybe Bool
+	, fsckresult ::  Maybe Bool
+	}
 	deriving (Read, Show)
 
-logTest :: [Git.Destroyer.Damage] -> Maybe Bool -> IO ()
-logTest damage result =
-	appendFile "test-runner.log" $ show (TestLog damage result) ++ "\n"
+logTest :: [Git.Destroyer.Damage] -> Maybe Bool -> Maybe Bool -> IO ()
+logTest damage result fsckok =
+	appendFile "test-runner.log" $
+		show (TestLog damage result fsckok) ++ "\n"
