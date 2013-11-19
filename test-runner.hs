@@ -40,6 +40,7 @@ runTest settings = withTmpDir "tmprepo" $ \tmpdir -> do
 	let cloneloc = tmpdir </> "clone"
 	cloned <- boolSystem "git"
 		[ Param "clone"
+		, Param "--no-hardlinks"
 		, File (originalGitRepo settings)
 		, File cloneloc
 		]
