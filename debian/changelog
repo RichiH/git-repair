@@ -1,3 +1,13 @@
+git-repair (1.20131119) UNRELEASED; urgency=low
+
+  * Added test-runner, which can be used to randomly corrupt test 
+    repositories, in reproducible ways, which allows easy
+    corruption-driven-development.
+  * Improve repair code in the case where the index file is corrupt,
+    and this hides other problems.
+
+ -- Joey Hess <joeyh@debian.org>  Tue, 19 Nov 2013 17:16:56 -0400
+
 git-repair (1.20131118) unstable; urgency=low
 
   * First release
