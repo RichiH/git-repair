@@ -76,7 +76,8 @@ generateDamage = sample' (arbitrary :: Gen Damage)
  - (as long as the Repo contains the same files each time). -}
 applyDamage :: [Damage] -> Repo -> IO ()
 applyDamage l r = do
-	contents <- sort <$> dirContentsRecursive (localGitDir r)
+	contents <- sort . filter (not . skipped . takeFileName)
+		<$> dirContentsRecursive (localGitDir r)
 	forM_ l $ \(Damage action fileselector) -> do
 		let f = selectFile contents fileselector
 		-- Symlinks might be dangling, so are skipped.
@@ -85,6 +86,9 @@ applyDamage l r = do
 		whenM (doesFileExist f) $
 			applyDamageAction action f
 				`catchIO` \e -> error ("Failed to apply " ++ show action ++ " " ++ show f ++ ": " ++ show e ++ "(total damage: " ++ show l ++ ")")
+  where
+  	-- A broken .git/config is not recoverable.
+	skipped f = f `elem` [ "config" ]
 
 applyDamageAction :: DamageAction -> FilePath -> IO ()
 applyDamageAction Empty f = withSaneMode f $ do
