@@ -117,13 +117,13 @@ explodePacks r = do
 			mapM_ go packs
 			return True
   where
-	go packfile = do
+	go packfile = withTmpFileIn (localGitDir r) "pack" $ \tmp _ -> do
+		moveFile packfile tmp
+		nukeFile $ packIdxFile packfile
 		-- May fail, if pack file is corrupt.
 		void $ tryIO $
-			pipeWrite [Param "unpack-objects"] r $ \h ->
-				L.hPut h =<< L.readFile packfile
-		nukeFile packfile
-		nukeFile $ packIdxFile packfile
+			pipeWrite [Param "unpack-objects", Param "-r"] r $ \h ->
+				L.hPut h =<< L.readFile tmp
 
 {- Try to retrieve a set of missing objects, from the remotes of a
  - repository. Returns any that could not be retreived.
@@ -151,6 +151,7 @@ retrieveMissingObjects missing referencerepo r
 		Nothing -> return stillmissing
 		Just p -> ifM (fetchfrom p fetchrefs tmpr)
 			( do
+				void $ explodePacks tmpr
 				void $ copyObjects tmpr r
 				case stillmissing of
 					Nothing -> return $ Just S.empty
@@ -163,6 +164,7 @@ retrieveMissingObjects missing referencerepo r
 			putStrLn $ "Trying to recover missing objects from remote " ++ repoDescribe rmt
 			ifM (fetchfrom (repoLocation rmt) fetchrefs tmpr)
 				( do
+					void $ explodePacks tmpr
 					void $ copyObjects tmpr r
 					case ms of
 						Nothing -> pullremotes tmpr rmts fetchrefs ms
