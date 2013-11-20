@@ -112,7 +112,7 @@ showTestResult settings testresult = do
 			return False
 		_ -> do
 			putStrLn "** repair failed"
-			return True
+			return False
 	when (stopOnFailure settings && not ok) $
 		exitFailure
 	return ok
