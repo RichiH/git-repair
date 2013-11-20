@@ -91,7 +91,7 @@ runTest settings damage = withTmpDir "tmprepo" $ \tmpdir -> do
 	case repairstatus of
 		Just True -> TestResult damage repairstatus 
 			. Just . not . Git.Fsck.foundBroken
-			<$> Git.Fsck.findBroken False g
+			<$> Git.Fsck.findBroken False False g
 		_ -> return $ TestResult damage repairstatus Nothing
 
 data TestResult = TestResult

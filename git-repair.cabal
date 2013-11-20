@@ -19,7 +19,7 @@ Description:
 
 Executable git-repair
   Main-Is: git-repair.hs
-  GHC-Options: -Wall
+  GHC-Options: -Wall -threaded
   Build-Depends: MissingH, hslogger, directory, filepath, containers, mtl,
    network, extensible-exceptions, unix-compat, bytestring,
    base >= 4.5, base < 5, IfElse, text, process,
@@ -30,7 +30,7 @@ Executable git-repair
 
 Executable test-runner
   Main-Is: test-runner.hs
-  GHC-Options: -Wall
+  GHC-Options: -Wall -threaded
   Build-Depends: MissingH, hslogger, directory, filepath, containers, mtl,
    network, extensible-exceptions, unix-compat, bytestring,
    base >= 4.5, base < 5, IfElse, text, process,
