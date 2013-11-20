@@ -20,18 +20,33 @@ data Settings = Settings
 	{ originalGitRepo :: FilePath
 	, forced :: Bool
 	, retryMode :: Bool
+	, stopOnFailure :: Bool
+	, numTests :: Int
 	}
 
 parseSettings :: Parser Settings
 parseSettings = Settings
-	<$> argument str (metavar "REPO")
-        <*> switch forceopt
-	<*> switch retryopt
-  where
-	forceopt = long "force"
+	<$> argument str
+		(metavar "REPO")
+        <*> switch
+		( long "force"
 		<> help "Force repair"
-	retryopt = long "retry"
+		)
+	<*> switch
+		( long "retry"
 		<> help "Retry tests in test-runner.log"
+		)
+	<*> switch
+		( long "stop-on-failure"
+		<> help "Stop running tests on failure"
+		)
+	<*> option
+		( long "numtests"
+		<> short 'n'
+		<> metavar "N"
+		<> help "Run N tests"
+		<> value 1
+		)
 
 main :: IO ()
 main = execParser opts >>= run
@@ -44,17 +59,19 @@ run :: Settings -> IO ()
 run settings
 	| retryMode settings = do
 		l <- map Prelude.read . lines <$> readFile logFile
-		rs <- forM l $ \damage -> 
-			runTest settings damage >>= showTestResult
-		exitBool $ and rs
-	| otherwise = runRandomTest settings
+		go $ forM l $ \damage -> 
+			runTest settings damage >>= showTestResult settings
+	| otherwise =
+		go $ replicateM (numTests settings) (runRandomTest settings)
+  where
+	go a = exitBool . and =<< a
 
-runRandomTest :: Settings -> IO ()
+runRandomTest :: Settings -> IO Bool
 runRandomTest settings = do
 	damage <- Git.Destroyer.generateDamage
 	logDamage damage
 	result <- runTest settings damage
-	showTestResult result >>= exitBool
+	showTestResult settings result
 
 runTest :: Settings -> [Git.Destroyer.Damage] -> IO TestResult
 runTest settings damage = withTmpDir "tmprepo" $ \tmpdir -> do
@@ -84,17 +101,21 @@ data TestResult = TestResult
 	}
 	deriving (Read, Show)
 
-showTestResult :: TestResult -> IO Bool
-showTestResult testresult = case (repairResult testresult, fsckResult testresult) of
-	(Just True, Just True) -> do
-		putStrLn "** repair succeeded"
-		return True
-	(Just True, Just False) -> do
-		putStrLn "** repair succeeded, but final fsck failed"
-		return False
-	_ -> do
-		putStrLn "** repair failed"
-		return True
+showTestResult :: Settings -> TestResult -> IO Bool
+showTestResult settings testresult = do
+	ok <- case (repairResult testresult, fsckResult testresult) of
+		(Just True, Just True) -> do
+			putStrLn "** repair succeeded"
+			return True
+		(Just True, Just False) -> do
+			putStrLn "** repair succeeded, but final fsck failed"
+			return False
+		_ -> do
+			putStrLn "** repair failed"
+			return True
+	when (stopOnFailure settings && not ok) $
+		exitFailure
+	return ok
 
 logDamage :: [Git.Destroyer.Damage] -> IO ()
 logDamage damage = appendFile logFile $ show damage ++ "\n"
