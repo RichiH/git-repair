@@ -467,7 +467,7 @@ preRepair g = do
 		writeFile headfile "ref: refs/heads/master"
   where
 	headfile = localGitDir g </> "HEAD"
-	validhead s = "ref: " `isPrefixOf` s || isJust (extractSha s)
+	validhead s = "ref: refs/" `isPrefixOf` s || isJust (extractSha s)
 
 {- Put it all together. -}
 runRepair :: Bool -> Repo -> IO (Bool, MissingObjects, [Branch])
