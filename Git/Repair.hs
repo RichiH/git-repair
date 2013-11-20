@@ -246,7 +246,8 @@ removeTrackingBranches missing goodcommits r =
 getAllRefs :: Repo -> IO [Ref]
 getAllRefs r = do
 	packedrs <- mapMaybe parsePacked . lines
-		<$> catchDefaultIO "" (readFile $ packedRefsFile r)
+		<$> catchDefaultIO "" 
+			(readFileStrictAnyEncoding $ packedRefsFile r)
 	loosers <- map toref <$> dirContentsRecursive refdir
 	return $ packedrs ++ loosers
   where
@@ -276,7 +277,7 @@ nukeBranchRef b r = void $ usegit <||> byhand
 		nukeFile $ localGitDir r </> show b
 		whenM (doesFileExist packedrefs) $
 			withTmpFile "packed-refs" $ \tmp h -> do
-				ls <- lines <$> readFile packedrefs
+				ls <- lines <$> readFileStrictAnyEncoding packedrefs
 				hPutStr h $ unlines $
 					filter (not . skiprefline) ls
 				hClose h
@@ -455,7 +456,7 @@ displayList items header
 preRepair :: Repo -> IO ()
 preRepair g = do
 	void $ tryIO $ allowRead headfile
-	unlessM (validhead <$> catchDefaultIO "" (readFile headfile)) $ do
+	unlessM (validhead <$> catchDefaultIO "" (readFileStrictAnyEncoding headfile)) $ do
 		nukeFile headfile
 		writeFile headfile "ref: refs/heads/master"
   where
