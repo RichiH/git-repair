@@ -60,7 +60,7 @@ cleanCorruptObjects mmissing r = check mmissing
 	check Nothing = do
 		putStrLn "git fsck found a problem but no specific broken objects. Perhaps a corrupt pack file?"
 		void $ explodePacks r
-		retry S.empty
+		retry 0 S.empty
 	check (Just bad)
 		| S.null bad = return $ Just S.empty
 		| otherwise = do
@@ -72,25 +72,38 @@ cleanCorruptObjects mmissing r = check mmissing
 			exploded <- explodePacks r
 			removed <- removeLoose r bad
 			if exploded || removed
-				then retry bad
+				then retry (S.size bad) bad
 				else return $ Just bad
-	retry oldbad = do
+	retry numremoved oldbad = do
 		putStrLn "Re-running git fsck to see if it finds more problems."
 		v <- findBroken False r
 		case v of
-			Nothing -> do
-				hPutStrLn stderr $ unwords
-					[ "git fsck found a problem, which was not corrected after removing"
-					, show (S.size oldbad)
-					, "corrupt objects."
-					]
-				return Nothing
+			Nothing
+				| numremoved > 0 -> do
+					hPutStrLn stderr $ unwords
+						[ "git fsck found a problem, which was not corrected after removing"
+						, show numremoved
+						, "corrupt objects."
+						]
+					return Nothing
+				| otherwise -> do
+					hPutStrLn stderr "Repacking all objects, to try to flush out unknown corrupt ones."
+					void $ runBool
+						[ Param "repack"
+						, Param "-a"
+						] r
+					void $ runBool
+						[ Param "prune-packed"
+						] r
+					s <- S.fromList <$> listLooseObjectShas r
+					void $ removeLoose r s
+					retry (S.size s) S.empty
 			Just newbad -> do
 				removed <- removeLoose r newbad
 				let s = S.union oldbad newbad
 				if not removed || s == oldbad
 					then return $ Just s
-					else retry s
+					else retry (S.size newbad) s
 
 removeLoose :: Repo -> MissingObjects -> IO Bool
 removeLoose r s = do
@@ -99,9 +112,9 @@ removeLoose r s = do
 	if (count > 0)
 		then do
 			putStrLn $ unwords
-				[ "removing"
+				[ "Removing"
 				, show count
-				, "corrupt loose objects"
+				, "corrupt loose objects."
 				]
 			mapM_ nukeFile fs
 			return True
@@ -128,12 +141,12 @@ explodePacks r = do
 {- Try to retrieve a set of missing objects, from the remotes of a
  - repository. Returns any that could not be retreived.
  -
- - Can also be run with Nothing, if it's not known which objects are
- - missing, just that some are. (Ie, fsck failed badly.)
- - 
  - If another clone of the repository exists locally, which might not be a
  - remote of the repo being repaired, its path can be passed as a reference
  - repository.
+ 
+ - Can also be run with Nothing, if it's not known which objects are
+ - missing, just that some are. (Ie, fsck failed badly.)
  -}
 retrieveMissingObjects :: Maybe MissingObjects -> Maybe FilePath -> Repo -> IO (Maybe MissingObjects)
 retrieveMissingObjects missing referencerepo r
@@ -161,7 +174,7 @@ retrieveMissingObjects missing referencerepo r
 	pullremotes tmpr (rmt:rmts) fetchrefs ms
 		| ms == Just S.empty = return $ Just S.empty
 		| otherwise = do
-			putStrLn $ "Trying to recover missing objects from remote " ++ repoDescribe rmt
+			putStrLn $ "Trying to recover missing objects from remote " ++ repoDescribe rmt ++ "."
 			ifM (fetchfrom (repoLocation rmt) fetchrefs tmpr)
 				( do
 					void $ explodePacks tmpr
@@ -191,7 +204,7 @@ retrieveMissingObjects missing referencerepo r
 	fetchallrefs = [ Param "+*:*" ]
 
 {- Copies all objects from the src repository to the dest repository.
- - This is done using rsync, so it copies all missing object, and all
+ - This is done using rsync, so it copies all missing objects, and all
  - objects they rely on. -}
 copyObjects :: Repo -> Repo -> IO Bool
 copyObjects srcr destr = rsync
@@ -499,14 +512,14 @@ runRepairOf fsckresult forced referencerepo g = do
 							then corruptedindex
 							else needforce S.empty
 					)
-			| otherwise -> do
-				putStrLn $ unwords
-					[ show (S.size s)
-					, "missing objects could not be recovered!"
-					]
-				if forced
-					then continuerepairs s
-					else unsuccessfulfinish s
+			| otherwise -> if forced
+				then continuerepairs s
+				else do
+					putStrLn $ unwords
+						[ show (S.size s)
+						, "missing objects could not be recovered!"
+						]
+					unsuccessfulfinish s
 		Nothing
 			| forced -> ifM (pure (repoIsLocalBare g) <||> checkIndex S.empty g)
 				( do
