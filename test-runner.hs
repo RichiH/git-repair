@@ -62,7 +62,9 @@ run settings
 		go $ forM l $ \damage -> 
 			runTest settings damage >>= showTestResult settings
 	| otherwise =
-		go $ replicateM (numTests settings) (runRandomTest settings)
+		go $ forM [1 .. numTests settings] $ \n -> do
+			putStrLn $ "** Test " ++ show n ++ "/" ++ show (numTests settings)
+			runRandomTest settings
   where
 	go a = exitBool . and =<< a
 
