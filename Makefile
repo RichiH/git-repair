@@ -31,3 +31,5 @@ hackage: clean
 # hothasktags chokes on some template haskell etc, so ignore errors
 tags:
 	find . | grep -v /.git/ | grep -v /tmp/ | grep -v /dist/ | grep -v /doc/ | egrep '\.hs$$' | xargs hothasktags > tags 2>/dev/null
+
+.PHONY: tags
