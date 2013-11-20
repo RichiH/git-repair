@@ -97,7 +97,7 @@ findMissing objs r = go objs [] =<< start
   where
 	start = catFileStart' False r
 	go [] c h = do
-		catFileStop h
+		void $ tryIO $ catFileStop h
 		return $ S.fromList c
 	go (o:os) c h = do
 		v <- tryIO $ isNothing <$> catObjectDetails h o
