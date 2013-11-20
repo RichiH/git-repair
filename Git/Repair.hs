@@ -481,9 +481,6 @@ runRepair forced g = do
 			putStrLn "No problems found."
 			return (True, S.empty, [])
 
-successfulRepair :: (Bool, MissingObjects, [Branch]) -> Bool
-successfulRepair = fst3
-
 runRepairOf :: FsckResults -> Bool -> Maybe FilePath -> Repo -> IO (Bool, MissingObjects, [Branch])
 runRepairOf fsckresult forced referencerepo g = do
 	missing <- cleanCorruptObjects fsckresult g
@@ -578,3 +575,6 @@ runRepairOf fsckresult forced referencerepo g = do
 	needforce stillmissing = do
 		putStrLn "To force a recovery to a usable state, retry with the --force parameter."
 		return (False, stillmissing, [])
+
+successfulRepair :: (Bool, MissingObjects, [Branch]) -> Bool
+successfulRepair = fst3
