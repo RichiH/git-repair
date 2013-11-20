@@ -36,6 +36,7 @@ import qualified Git.UpdateIndex as UpdateIndex
 import qualified Git.Branch as Branch
 import Utility.Tmp
 import Utility.Rsync
+import Utility.FileMode
 
 import qualified Data.Set as S
 import qualified Data.ByteString.Lazy as L
@@ -444,9 +445,27 @@ displayList items header
 		| numitems > 10 = take 10 items ++ ["(and " ++ show (numitems - 10) ++ " more)"]
 		| otherwise = items
 
+{- Fix problems that would prevent repair from working at all
+ -
+ - A missing or corrupt .git/HEAD makes git not treat the repository as a
+ - git repo. If there is a git repo in a parent directory, it may move up
+ - the tree and use that one instead. So, cannot use `git show-ref HEAD` to
+ - test it.
+ -}
+preRepair :: Repo -> IO ()
+preRepair g = do
+	void $ tryIO $ allowRead headfile
+	unlessM (validhead <$> catchDefaultIO "" (readFile headfile)) $ do
+		nukeFile headfile
+		writeFile headfile "ref: refs/heads/master"
+  where
+	headfile = localGitDir g </> "HEAD"
+	validhead s = "ref: " `isPrefixOf` s || isJust (extractSha s)
+
 {- Put it all together. -}
 runRepair :: Bool -> Repo -> IO (Bool, MissingObjects, [Branch])
 runRepair forced g = do
+	preRepair g
 	putStrLn "Running git fsck ..."
 	fsckresult <- findBroken False g
 	if foundBroken fsckresult

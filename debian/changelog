@@ -5,6 +5,8 @@ git-repair (1.20131119) UNRELEASED; urgency=low
     corruption-driven-development.
   * Improve repair code in the case where the index file is corrupt,
     and this hides other problems.
+  * Write a dummy .git/HEAD if the file is missing or corrupt, as
+    git otherwise will not treat the repository as a git repo.
 
  -- Joey Hess <joeyh@debian.org>  Tue, 19 Nov 2013 17:16:56 -0400
 
