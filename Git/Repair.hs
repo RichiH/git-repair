@@ -505,16 +505,18 @@ runRepairOf fsckresult forced referencerepo g = do
 				if forced
 					then continuerepairs s
 					else unsuccessfulfinish s
-		Nothing -> do
-			if forced
-				then do
+		Nothing
+			| forced -> ifM (pure (repoIsLocalBare g) <||> checkIndex S.empty g)
+				( do
 					fsckresult' <- findBroken False False g
 					case fsckresult' of
 						Nothing -> do
 							putStrLn "Unable to fully recover; cannot find missing objects."
 							return (False, S.empty, [])
 						Just stillmissing' -> continuerepairs stillmissing'
-				else unsuccessfulfinish S.empty
+				, corruptedindex
+				)
+			| otherwise -> unsuccessfulfinish S.empty
   where
 	continuerepairs stillmissing = do
 		(remotebranches, goodcommits) <- removeTrackingBranches stillmissing emptyGoodCommits g
