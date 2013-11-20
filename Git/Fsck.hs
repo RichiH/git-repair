@@ -41,13 +41,10 @@ findBroken :: Bool -> Repo -> IO FsckResults
 findBroken batchmode r = do
 	(output, fsckok) <- processTranscript command' (toCommand params') Nothing
 	let objs = findShas output
-	if fsckok
-		then do
-			badobjs <- findMissing objs r
-			if S.null badobjs && not fsckok
-				then return Nothing
-				else return $ Just badobjs
-		else return Nothing
+	badobjs <- findMissing objs r
+	if S.null badobjs && not fsckok
+		then return Nothing
+		else return $ Just badobjs
   where
 	(command, params) = ("git", fsckParams r)
 	(command', params')
