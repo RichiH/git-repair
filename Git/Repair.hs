@@ -76,7 +76,7 @@ cleanCorruptObjects mmissing r = check mmissing
 				else return $ Just bad
 	retry oldbad = do
 		putStrLn "Re-running git fsck to see if it finds more problems."
-		v <- findBroken False True r
+		v <- findBroken False r
 		case v of
 			Nothing -> do
 				hPutStrLn stderr $ unwords
@@ -474,7 +474,7 @@ runRepair :: Bool -> Repo -> IO (Bool, MissingObjects, [Branch])
 runRepair forced g = do
 	preRepair g
 	putStrLn "Running git fsck ..."
-	fsckresult <- findBroken False False g
+	fsckresult <- findBroken False g
 	if foundBroken fsckresult
 		then runRepairOf fsckresult forced Nothing g
 		else do
@@ -508,7 +508,7 @@ runRepairOf fsckresult forced referencerepo g = do
 		Nothing
 			| forced -> ifM (pure (repoIsLocalBare g) <||> checkIndex S.empty g)
 				( do
-					fsckresult' <- findBroken False False g
+					fsckresult' <- findBroken False g
 					case fsckresult' of
 						Nothing -> do
 							putStrLn "Unable to fully recover; cannot find missing objects."
@@ -556,7 +556,7 @@ runRepairOf fsckresult forced referencerepo g = do
 		nukeIndex g
 		-- The corrupted index can prevent fsck from finding other
 		-- problems, so re-run repair.
-		fsckresult' <- findBroken False False g
+		fsckresult' <- findBroken False g
 		result <- runRepairOf fsckresult' forced referencerepo g
 		putStrLn "Removed the corrupted index file. You should look at what files are present in your working tree and git add them back to the index when appropriate."
 		return result

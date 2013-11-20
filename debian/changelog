@@ -10,6 +10,8 @@ git-repair (1.20131119) UNRELEASED; urgency=low
   * Improve fsck code to find badly corrupted objects that crash git fsck
     before it can complain about them.
   * Fixed crashes on bad file encodings.
+  * Can now run 1000 tests (./test-runner . --stop-on-failure -n 1000 --force)
+    with 0 failures.
 
  -- Joey Hess <joeyh@debian.org>  Tue, 19 Nov 2013 17:16:56 -0400
 
