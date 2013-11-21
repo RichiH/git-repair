@@ -47,7 +47,7 @@ instance Arbitrary DamageAction where
 		, AppendGarbage <$> garbage
 		, PrependGarbage <$> garbage
 		, CorruptByte
-			<$> nonNegative arbitrarySizedIntegral
+			<$> nonNegative arbitraryBoundedIntegral
 			<*> arbitrary
 		, ScrambleFileMode <$> nonNegative arbitrarySizedIntegral
 		]
@@ -61,7 +61,7 @@ data FileSelector = FileSelector Int
 	deriving (Read, Show)
 
 instance Arbitrary FileSelector where
-	arbitrary = FileSelector <$> nonNegative arbitrarySizedIntegral
+	arbitrary = FileSelector <$> nonNegative arbitraryBoundedIntegral
 
 selectFile :: [FilePath] -> FileSelector -> FilePath
 selectFile sortedfs (FileSelector n) = sortedfs !! (n `mod` length sortedfs)
