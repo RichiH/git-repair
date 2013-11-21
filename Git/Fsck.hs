@@ -19,8 +19,10 @@ import Git.Command
 import Git.Sha
 import Git.CatFile
 import Utility.Batch
+import Utility.ThreadScheduler
 
 import qualified Data.Set as S
+import Control.Concurrent.Async
 
 type MissingObjects = S.Set Sha
 
@@ -57,8 +59,8 @@ foundBroken (Just s) = not (S.null s)
 
 {- Finds objects that are missing from the git repsitory, or are corrupt.
  -
- - Note that catting a corrupt object will cause cat-file to crash;
- - this is detected and it's restarted.
+ - Note that catting a corrupt object will cause cat-file to crash,
+ - or sometimes to stall; this is detected and it's restarted.
  -}
 findMissing :: [Sha] -> Repo -> IO MissingObjects
 findMissing objs r = go objs [] =<< start
@@ -68,7 +70,12 @@ findMissing objs r = go objs [] =<< start
 		void $ tryIO $ catFileStop h
 		return $ S.fromList c
 	go (o:os) c h = do
-		v <- tryNonAsync $ isNothing <$> catObjectDetails h o
+		reader <- async $ isNothing <$> catObjectDetails h o
+		killer <- async $ do
+			threadDelaySeconds (Seconds 60)
+			cancel reader
+		v <- waitCatch reader
+		cancel killer
 		case v of
 			Left _ -> do
 				void $ tryIO $ catFileStop h
