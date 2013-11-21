@@ -18,10 +18,10 @@ data Settings = Settings
 
 parseSettings :: Parser Settings
 parseSettings = Settings
-	<$> switch forceopt
-  where
-	forceopt = long "force"
+	<$> switch
+		( long "force"
 		<> help "Force repair, even if data is lost"
+		)
 
 main :: IO ()
 main = execParser opts >>= repair
