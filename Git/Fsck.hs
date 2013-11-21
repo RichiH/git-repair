@@ -41,7 +41,6 @@ findBroken batchmode r = do
 	(output, fsckok) <- processTranscript command' (toCommand params') Nothing
 	let objs = findShas output
 	badobjs <- findMissing objs r
-	print badobjs
 	if S.null badobjs && not fsckok
 		then return Nothing
 		else return $ Just badobjs
