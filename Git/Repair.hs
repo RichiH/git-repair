@@ -515,9 +515,9 @@ runRepairOf fsckresult forced referencerepo g = do
 		(remotebranches, goodcommits) <- removeTrackingBranches stillmissing emptyGoodCommits g
 		unless (null remotebranches) $
 			putStrLn $ unwords
-				[ "removed"
+				[ "Removed"
 				, show (length remotebranches)
-				, "remote tracking branches that referred to missing objects"
+				, "remote tracking branches that referred to missing objects."
 				]
 		(resetbranches, deletedbranches, _) <- resetLocalBranches stillmissing goodcommits g
 		displayList (map show resetbranches)
