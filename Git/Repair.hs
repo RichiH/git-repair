@@ -42,55 +42,21 @@ import qualified Data.Set as S
 import qualified Data.ByteString.Lazy as L
 import Data.Tuple.Utils
 
-{- Given a set of bad objects found by git fsck, removes all
- - corrupt objects, and returns a list of missing objects,
- - which need to be found elsewhere to finish recovery.
- -
- - Since git fsck may crash on corrupt objects, and so not
- - report the full set of corrupt or missing objects,
- - this removes corrupt objects, and re-runs fsck, until it
- - stabilizes.
- -
- - To remove corrupt objects, unpack all packs, and remove the packs
- - (to handle corrupt packs), and remove loose object files.
+{- Given a set of bad objects found by git fsck, which may not
+ - be complete, finds and removes all corrupt objects, and
+ - returns a list of missing objects, which need to be
+ - found elsewhere to finish recovery.
  -}
 cleanCorruptObjects :: FsckResults -> Repo -> IO (Maybe MissingObjects)
-cleanCorruptObjects mmissing r = check mmissing
-  where
-	check Nothing = do
-		putStrLn "git fsck found a problem but no specific broken objects. Perhaps a corrupt pack file?"
-		void $ explodePacks r
-		retry 0 S.empty
-	check (Just bad)
-		| S.null bad = return $ Just S.empty
-		| otherwise = do
-			putStrLn $ unwords 
-				[ "git fsck found"
-				, show (S.size bad)
-				, "broken objects."
-				]
-			exploded <- explodePacks r
-			removed <- removeLoose r bad
-			if exploded || removed
-				then retry (S.size bad) bad
-				else return $ Just bad
-	retry numremoved oldbad = do
-		putStrLn "Re-running git fsck to see if it finds more problems."
-		v <- findBroken False r
-		case v of
-			Nothing -> do
-				hPutStrLn stderr $ unwords
-					[ "git fsck found a problem, which was not corrected after removing"
-					, show numremoved
-					, "corrupt objects."
-					]
-				return Nothing
-			Just newbad -> do
-				removed <- removeLoose r newbad
-				let s = S.union oldbad newbad
-				if not removed || s == oldbad
-					then return $ Just s
-					else retry (S.size newbad) s
+cleanCorruptObjects fsckresults r = do
+	void $ explodePacks r
+	objs <- listLooseObjectShas r
+	bad <- findMissing objs r
+	void $ removeLoose r $ S.union bad (fromMaybe S.empty fsckresults)
+	-- Rather than returning the loose objects that were removed, re-run
+	-- fsck. Other missing objects may have been in the packs,
+	-- and this way fsck will find them.
+	findBroken False r
 
 removeLoose :: Repo -> MissingObjects -> IO Bool
 removeLoose r s = do
