@@ -34,7 +34,7 @@ parseSettings = Settings
 		)
 	<*> switch
 		( long "retry"
-		<> help "Retry tests in test-runner.log"
+		<> help "Retry tests in git-repair-test.log"
 		)
 	<*> switch
 		( long "stop-on-failure"
@@ -53,7 +53,7 @@ main = execParser opts >>= run
   where
 	opts = info (helper <*> parseSettings) desc
 	desc = fullDesc
-		<> header "test-runner - test command in corrupted git repository"
+		<> header "git-repair-test - test git-repair"
 
 run :: Settings -> IO ()
 run settings
@@ -123,4 +123,4 @@ logDamage :: [Git.Destroyer.Damage] -> IO ()
 logDamage damage = appendFile logFile $ show damage ++ "\n"
 
 logFile :: FilePath
-logFile = "test-runner.log"
+logFile = "git-repair-test.log"

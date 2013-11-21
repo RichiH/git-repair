@@ -4,7 +4,7 @@ CABAL?=cabal # set to "./Setup" if you lack a cabal program
 build: Build/SysConfig.hs
 	$(CABAL) build
 	ln -sf dist/build/git-repair/git-repair git-repair
-	ln -sf dist/build/test-runner/test-runner test-runner
+	ln -sf dist/build/git-repair-test/git-repair-test git-repair-test
 	@$(MAKE) tags >/dev/null 2>&1 &
 
 Build/SysConfig.hs: configure.hs Build/TestConfig.hs Build/Configure.hs
@@ -18,7 +18,7 @@ install: build
 	install -m 0644 git-repair.1 $(DESTDIR)$(PREFIX)/share/man/man1
 
 clean:
-	rm -rf git-repair test-runner test-runner.log \
+	rm -rf git-repair git-repair-test git-repair-test.log \
 		dist configure Build/SysConfig.hs Setup tags
 	find . -name \*.o -exec rm {} \;
 	find . -name \*.hi -exec rm {} \;
