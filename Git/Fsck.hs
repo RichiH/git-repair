@@ -17,12 +17,9 @@ import Common
 import Git
 import Git.Command
 import Git.Sha
-import Git.Objects
 import Utility.Batch
-import Utility.Hash
 
 import qualified Data.Set as S
-import qualified Data.ByteString.Lazy as L
 
 type MissingObjects = S.Set Sha
 

@@ -17,9 +17,6 @@ Description:
  It is a complement to git fsck, which finds problems, but does not fix
  them.
 
-Flag CryptoHash
-  Description: Enable use of cryptohash for checksumming
-
 Executable git-repair
   Main-Is: git-repair.hs
   GHC-Options: -Wall -threaded
@@ -30,10 +27,6 @@ Executable git-repair
 
   if (! os(windows))
     Build-Depends: unix
-
-  if flag(CryptoHash)
-    Build-Depends: cryptohash (>= 0.10.0)
-    CPP-Options: -DWITH_CRYPTOHASH
 
 source-repository head
   type: git

@@ -13,8 +13,7 @@ Build-Depends:
 	libghc-unix-compat-dev,
 	libghc-utf8-string-dev,
 	libghc-async-dev,
-	libghc-optparse-applicative-dev,
-	libghc-cryptohash-dev
+	libghc-optparse-applicative-dev
 Maintainer: Joey Hess <joeyh@debian.org>
 Standards-Version: 3.9.4
 Vcs-Git: git://git-repair.branchable.com/
