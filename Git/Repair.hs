@@ -172,13 +172,7 @@ retrieveMissingObjects missing referencerepo r
 						Just s -> do
 							stillmissing <- findMissing (S.toList s) r
 							pullremotes tmpr rmts fetchrefs (Just stillmissing)
-				, do
-					putStrLn $ unwords
-						[ "failed to fetch from remote"
-						, repoDescribe rmt
-						, "(will continue without it, but making this remote available may improve recovery)"
-						]
-					pullremotes tmpr rmts fetchrefs ms
+				, pullremotes tmpr rmts fetchrefs ms
 				)
 	fetchfrom fetchurl ps = runBool $
 		[ Param "fetch"
