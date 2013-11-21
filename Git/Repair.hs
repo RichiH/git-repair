@@ -78,26 +78,13 @@ cleanCorruptObjects mmissing r = check mmissing
 		putStrLn "Re-running git fsck to see if it finds more problems."
 		v <- findBroken False r
 		case v of
-			Nothing
-				| numremoved > 0 -> do
-					hPutStrLn stderr $ unwords
-						[ "git fsck found a problem, which was not corrected after removing"
-						, show numremoved
-						, "corrupt objects."
-						]
-					return Nothing
-				| otherwise -> do
-					hPutStrLn stderr "Repacking all objects, to try to flush out unknown corrupt ones."
-					void $ runBool
-						[ Param "repack"
-						, Param "-a"
-						] r
-					void $ runBool
-						[ Param "prune-packed"
-						] r
-					s <- S.fromList <$> listLooseObjectShas r
-					void $ removeLoose r s
-					retry (S.size s) S.empty
+			Nothing -> do
+				hPutStrLn stderr $ unwords
+					[ "git fsck found a problem, which was not corrected after removing"
+					, show numremoved
+					, "corrupt objects."
+					]
+				return Nothing
 			Just newbad -> do
 				removed <- removeLoose r newbad
 				let s = S.union oldbad newbad
@@ -133,6 +120,7 @@ explodePacks r = do
 	go packfile = withTmpFileIn (localGitDir r) "pack" $ \tmp _ -> do
 		moveFile packfile tmp
 		nukeFile $ packIdxFile packfile
+		allowRead tmp
 		-- May fail, if pack file is corrupt.
 		void $ tryIO $
 			pipeWrite [Param "unpack-objects", Param "-r"] r $ \h ->
@@ -267,8 +255,7 @@ removeTrackingBranches missing goodcommits r =
 getAllRefs :: Repo -> IO [Ref]
 getAllRefs r = do
 	packedrs <- mapMaybe parsePacked . lines
-		<$> catchDefaultIO "" 
-			(readFileStrictAnyEncoding $ packedRefsFile r)
+		<$> catchDefaultIO "" (safeReadFile $ packedRefsFile r)
 	loosers <- map toref <$> dirContentsRecursive refdir
 	return $ packedrs ++ loosers
   where
@@ -296,9 +283,9 @@ nukeBranchRef b r = void $ usegit <||> byhand
 		] r
 	byhand = do
 		nukeFile $ localGitDir r </> show b
-		whenM (doesFileExist packedrefs) $
+		whenM (doesFileExist packedrefs) $ do
 			withTmpFile "packed-refs" $ \tmp h -> do
-				ls <- lines <$> readFileStrictAnyEncoding packedrefs
+				ls <- lines <$> safeReadFile packedrefs
 				hPutStr h $ unlines $
 					filter (not . skiprefline) ls
 				hClose h
@@ -476,8 +463,7 @@ displayList items header
  -}
 preRepair :: Repo -> IO ()
 preRepair g = do
-	void $ tryIO $ allowRead headfile
-	unlessM (validhead <$> catchDefaultIO "" (readFileStrictAnyEncoding headfile)) $ do
+	unlessM (validhead <$> catchDefaultIO "" (safeReadFile headfile)) $ do
 		nukeFile headfile
 		writeFile headfile "ref: refs/heads/master"
   where
@@ -596,3 +582,8 @@ runRepairOf fsckresult forced referencerepo g = do
 
 successfulRepair :: (Bool, MissingObjects, [Branch]) -> Bool
 successfulRepair = fst3
+
+safeReadFile :: FilePath -> IO String
+safeReadFile f = do
+	allowRead f
+	readFileStrictAnyEncoding f
