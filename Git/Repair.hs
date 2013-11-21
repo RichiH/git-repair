@@ -245,51 +245,44 @@ removeTrackingBranches missing goodcommits r =
 {- Gets all refs, including ones that are corrupt.
  - git show-ref does not output refs to commits that are directly
  - corrupted, so it is not used.
+ -
+ - Relies on packed refs being exploded before it's called.
  -}
 getAllRefs :: Repo -> IO [Ref]
-getAllRefs r = do
-	packedrs <- mapMaybe parsePacked . lines
-		<$> catchDefaultIO "" (safeReadFile $ packedRefsFile r)
-	loosers <- map toref <$> dirContentsRecursive refdir
-	return $ packedrs ++ loosers
+getAllRefs r = map toref <$> dirContentsRecursive refdir
   where
   	refdir = localGitDir r </> "refs"
 	toref = Ref . relPathDirToFile (localGitDir r)
 
+explodePackedRefsFile :: Repo -> IO ()
+explodePackedRefsFile r = do
+	let f = packedRefsFile r
+	whenM (doesFileExist f) $ do
+		rs <- mapMaybe parsePacked . lines
+			<$> catchDefaultIO "" (safeReadFile f)
+		forM_ rs makeref
+		nukeFile f
+  where
+	makeref (sha, ref) = do
+		let dest = localGitDir r ++ show ref
+		createDirectoryIfMissing True (parentDir dest)
+		unlessM (doesFileExist dest) $
+			writeFile dest (show sha)
+
 packedRefsFile :: Repo -> FilePath
 packedRefsFile r = localGitDir r </> "packed-refs"
 
-parsePacked :: String -> Maybe Ref
+parsePacked :: String -> Maybe (Sha, Ref)
 parsePacked l = case words l of
 	(sha:ref:[])
-		| isJust (extractSha sha) -> Just $ Ref ref
+		| isJust (extractSha sha) && Ref.legal True ref ->
+			Just (Ref sha, Ref ref)
 	_ -> Nothing
 
 {- git-branch -d cannot be used to remove a branch that is directly
- - pointing to a corrupt commit. However, it's tried first. -}
+ - pointing to a corrupt commit. -}
 nukeBranchRef :: Branch -> Repo -> IO ()
-nukeBranchRef b r = void $ usegit <||> byhand
-  where
-	usegit = runBool
-		[ Param "branch"
-		, Params "-r -d"
-		, Param $ show $ Ref.base b
-		] r
-	byhand = do
-		nukeFile $ localGitDir r </> show b
-		whenM (doesFileExist packedrefs) $ do
-			withTmpFile "packed-refs" $ \tmp h -> do
-				ls <- lines <$> safeReadFile packedrefs
-				hPutStr h $ unlines $
-					filter (not . skiprefline) ls
-				hClose h
-				renameFile tmp packedrefs
-		return True
-	skiprefline l = case parsePacked l of
-		Just packedref
-			| packedref == b -> True
-		_ -> False
-	packedrefs = packedRefsFile r
+nukeBranchRef b r = nukeFile $ localGitDir r </> show b
 
 {- Finds the most recent commit to a branch that does not need any
  - of the missing objects. If the input branch is good as-is, returns it.
@@ -454,12 +447,16 @@ displayList items header
  - git repo. If there is a git repo in a parent directory, it may move up
  - the tree and use that one instead. So, cannot use `git show-ref HEAD` to
  - test it.
+ -
+ - Explode the packed refs file, to simplify dealing with refs, and because
+ - fsck can complain about bad refs in it.
  -}
 preRepair :: Repo -> IO ()
 preRepair g = do
 	unlessM (validhead <$> catchDefaultIO "" (safeReadFile headfile)) $ do
 		nukeFile headfile
 		writeFile headfile "ref: refs/heads/master"
+	explodePackedRefsFile g
   where
 	headfile = localGitDir g </> "HEAD"
 	validhead s = "ref: refs/" `isPrefixOf` s || isJust (extractSha s)
