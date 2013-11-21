@@ -61,7 +61,14 @@ data FileSelector = FileSelector Int
 	deriving (Read, Show)
 
 instance Arbitrary FileSelector where
-	arbitrary = FileSelector <$> nonNegative arbitraryBoundedIntegral
+	arbitrary = FileSelector <$> oneof
+		-- An early file in the git tree, tends to be the most
+		-- interesting when there are lots of files.
+		[ nonNegative arbitrarySizedIntegral
+		-- Totally random choice from any of the files in
+		-- the git tree, to ensure good coverage.
+		, nonNegative arbitraryBoundedIntegral
+		]
 
 selectFile :: [FilePath] -> FileSelector -> FilePath
 selectFile sortedfs (FileSelector n) = sortedfs !! (n `mod` length sortedfs)
