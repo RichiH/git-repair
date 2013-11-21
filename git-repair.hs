@@ -70,17 +70,17 @@ test settings = do
 		putStrLn $ "** Test " ++ show n ++ "/" ++ show (numTests settings)
 		damage <- Git.Destroyer.generateDamage
 		logDamage damage
-		runTest settings damage >>= handleTestResult
+		runTest settings damage
 	allOk
 
 retryTest :: Settings -> IO ()
 retryTest settings = do
 	l <- map Prelude.read . lines <$> readFile logFile
 	forM_ l $ \damage -> 
-		runTest settings damage >>= handleTestResult
+		runTest settings damage
 	allOk
 
-runTest :: Settings -> [Git.Destroyer.Damage] -> IO TestResult
+runTest :: Settings -> [Git.Destroyer.Damage] -> IO ()
 runTest settings damage = withTmpDir "tmprepo" $ \tmpdir -> do
 	let cloneloc = tmpdir </> "clone"
 	cloned <- boolSystem "git"
@@ -96,31 +96,16 @@ runTest settings damage = withTmpDir "tmprepo" $ \tmpdir -> do
 	repairstatus <- catchMaybeIO $ Git.Repair.successfulRepair
 		<$> Git.Repair.runRepair (forced settings) g
 	case repairstatus of
-		Just True -> TestResult repairstatus 
+		Just True -> testResult repairstatus 
 			. Just . not . Git.Fsck.foundBroken
-			<$> Git.Fsck.findBroken False g
-		_ -> return $ TestResult repairstatus Nothing
+			=<< Git.Fsck.findBroken False g
+		_ -> testResult repairstatus Nothing
 
-data TestResult = TestResult
-	{ repairResult :: Maybe Bool
-	, fsckResult ::  Maybe Bool
-	}
-	deriving (Read, Show)
-
-handleTestResult :: TestResult -> IO ()
-handleTestResult testresult = do
-	ok <- case (repairResult testresult, fsckResult testresult) of
-		(Just True, Just True) -> do
-			putStrLn "** repair succeeded"
-			return True
-		(Just True, Just False) -> do
-			putStrLn "** repair succeeded, but final fsck failed"
-			return False
-		_ -> do
-			putStrLn "** repair failed"
-			return False
-	unless ok $
-		exitFailure
+-- Pass test result and fsck result
+testResult :: (Maybe Bool) -> (Maybe Bool) -> IO ()
+testResult (Just True) (Just True) = putStrLn "** repair succeeded"
+testResult (Just True) (Just False) = error "** repair succeeded, but final fsck failed"
+testResult _ _ = error "** repair failed"
 
 allOk :: IO ()
 allOk = do
