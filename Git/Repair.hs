@@ -94,9 +94,9 @@ cleanCorruptObjects mmissing r = check mmissing
 
 removeLoose :: Repo -> MissingObjects -> IO Bool
 removeLoose r s = do
-	let fs = map (looseObjectFile r) (S.toList s)
-	count <- length <$> filterM doesFileExist fs
-	if (count > 0)
+	fs <- filterM doesFileExist (map (looseObjectFile r) (S.toList s))
+	let count = length fs
+	if count > 0
 		then do
 			putStrLn $ unwords
 				[ "Removing"
