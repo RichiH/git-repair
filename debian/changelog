@@ -1,6 +1,6 @@
 git-repair (1.20131119) UNRELEASED; urgency=low
 
-  * Added test-runner, which can be used to randomly corrupt test 
+  * Added test mode, which can be used to randomly corrupt test 
     repositories, in reproducible ways, which allows easy
     corruption-driven-development.
   * Improve repair code in the case where the index file is corrupt,
@@ -10,7 +10,7 @@ git-repair (1.20131119) UNRELEASED; urgency=low
   * Improve fsck code to find badly corrupted objects that crash git fsck
     before it can complain about them.
   * Fixed crashes on bad file encodings.
-  * Can now run 1000 tests (./test-runner . --stop-on-failure -n 10000 --force)
+  * Can now run 1000 tests (git-repair --test -n 10000 --force)
     with 0 failures.
 
  -- Joey Hess <joeyh@debian.org>  Tue, 19 Nov 2013 17:16:56 -0400

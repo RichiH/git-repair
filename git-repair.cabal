@@ -22,20 +22,8 @@ Executable git-repair
   GHC-Options: -Wall -threaded
   Build-Depends: MissingH, hslogger, directory, filepath, containers, mtl,
    network, extensible-exceptions, unix-compat, bytestring,
-   base >= 4.5, base < 5, IfElse, text, process,
+   base >= 4.5, base < 5, IfElse, text, process, time, QuickCheck,
    utf8-string, async, optparse-applicative
-
-  if (! os(windows))
-    Build-Depends: unix
-
-Executable git-repair-test
-  Main-Is: git-repair-test.hs
-  GHC-Options: -Wall -threaded
-  Build-Depends: MissingH, hslogger, directory, filepath, containers, mtl,
-   network, extensible-exceptions, unix-compat, bytestring,
-   base >= 4.5, base < 5, IfElse, text, process,
-   utf8-string, async, optparse-applicative,
-   QuickCheck >= 2.1, time
 
   if (! os(windows))
     Build-Depends: unix
