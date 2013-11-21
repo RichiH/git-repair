@@ -44,6 +44,7 @@ findBroken batchmode r = do
 	(output, fsckok) <- processTranscript command' (toCommand params') Nothing
 	let objs = findShas output
 	badobjs <- findMissing objs r
+	print badobjs
 	if S.null badobjs && not fsckok
 		then return Nothing
 		else return $ Just badobjs
@@ -61,31 +62,15 @@ foundBroken (Just s) = not (S.null s)
  -
  - This does not use git cat-file --batch, because catting a corrupt
  - object can cause it to crash, or to report incorrect size information.a
- -
- - Note that git cat-file -p can succeed in printing out objects that
- - are corrupt. Since its output may be a pretty-printed object, or may be
- - a blob, it cannot be verified. So, this has false negatives.
- -
- - As a secondary check, if cat-file says the object is there, check if
- - the loose object file is available, and if so, try taking its sha1
- - ourselves. This will always work once all packs have been unpacked.
  -}
 findMissing :: [Sha] -> Repo -> IO MissingObjects
 findMissing objs r = S.fromList <$> filterM (not <$$> present) objs
   where
-	present o = 
-		either (const $ return False) (const $ verifyLooseObject o r)
-			=<< tryIO (cat o)
-	cat o = runQuiet
-		[ Param "cat-file"
-		, Param "-p"
+	present o = either (const False) (const True) <$> tryIO (dump o)
+	dump o = runQuiet
+		[ Param "show"
 		, Param (show o)
 		] r
-
-verifyLooseObject :: Sha -> Repo -> IO Bool
-verifyLooseObject s r = do
-	sha <- sha1 <$> L.readFile (looseObjectFile r s)
-	return $ show sha == show s
 
 findShas :: String -> [Sha]
 findShas = catMaybes . map extractSha . concat . map words . lines
