@@ -73,9 +73,7 @@ instance Arbitrary FileSelector where
 selectFile :: [FilePath] -> FileSelector -> FilePath
 selectFile sortedfs (FileSelector n) = sortedfs !! (n `mod` length sortedfs)
 
-{- Generates random Damage.
- -
- - TODO: sample' only seems to go up to 20 for files? -}
+{- Generates random Damage. -}
 generateDamage :: IO [Damage]
 generateDamage = sample' (arbitrary :: Gen Damage)
 
