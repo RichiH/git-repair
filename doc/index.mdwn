@@ -5,7 +5,11 @@ them.
 
 ## download
 
+* git
+
 	git clone git://git-repair.branchable.com/ git-repair
+
+* from [Hackage](http://hackage.haskell.org/package/git-repair)
 
 ## install
 
