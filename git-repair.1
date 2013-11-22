@@ -1,0 +1,37 @@
+.TH  
+.SH NAME
+git\-repair \- Fix a broken git repository
+.PP
+.SH SYNOPSIS
+git\-repair [\-\-force]
+.PP
+.SH DESCRIPTION
+This can fix a corrupt or broken git repository, which git fsck would
+only complain has problems.
+.PP
+It does by deleting all corrupt objects, and retreiving all missing
+objects that it can from the remotes of the repository.
+.PP
+If that is not sufficient to fully recover the repository, it can also
+reset branches back to commits before the corruption happened, delete
+branches that are no longer available due to the lost data, and remove any
+missing files from the index. It will only do this if run with the
+\fB\-\-force\fP option, since that rewrites history and throws out missing data.
+Note that the \fB\-\-force\fP option never touches tags, even if they are no
+longer usable due to missing data.
+.PP
+After running this command, you will probably want to run \fBgit fsck\fP to
+verify it fixed the repository. Note that fsck may still complain about
+objects referenced by the reflog, or the stash, if they were unable to be
+recovered. This command does not try to clean up either the reflog or the
+stash.
+.PP
+Since this command unpacks all packs in the repository, you may want to
+run \fBgit gc\fP afterwards.
+.PP
+.SH AUTHOR
+Joey Hess <joey@kitenet.net>
+.PP
+<http://git\-repair.branchable.com/>
+.PP
+.PP
