@@ -1,4 +1,4 @@
-git-repair (1.20131119) UNRELEASED; urgency=low
+git-repair (1.20131122) unstable; urgency=low
 
   * Added test mode, which can be used to randomly corrupt test 
     repositories, in reproducible ways, which allows easy
@@ -10,10 +10,10 @@ git-repair (1.20131119) UNRELEASED; urgency=low
   * Improve fsck code to find badly corrupted objects that crash git fsck
     before it can complain about them.
   * Fixed crashes on bad file encodings.
-  * Can now run 1000 tests (git-repair --test -n 10000 --force)
+  * Can now run 10000 tests (git-repair --test -n 10000 --force)
     with 0 failures.
 
- -- Joey Hess <joeyh@debian.org>  Tue, 19 Nov 2013 17:16:56 -0400
+ -- Joey Hess <joeyh@debian.org>  Fri, 22 Nov 2013 11:16:03 -0400
 
 git-repair (1.20131118) unstable; urgency=low
 
