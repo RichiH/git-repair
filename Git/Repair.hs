@@ -15,7 +15,6 @@ module Git.Repair (
 	removeTrackingBranches,
 	checkIndex,
 	missingIndex,
-	nukeIndex,
 	emptyGoodCommits,
 ) where
 
@@ -368,7 +367,7 @@ rewriteIndex missing r
 	| otherwise = do
 		(bad, good, cleanup) <- partitionIndex missing r
 		unless (null bad) $ do
-			nukeIndex r
+			nukeFile (indexFile r)
 			UpdateIndex.streamUpdateIndex r
 				=<< (catMaybes <$> mapM reinject good)
 		void cleanup
@@ -380,8 +379,8 @@ rewriteIndex missing r
 			UpdateIndex.stageFile sha blobtype file r
 	reinject _ = return Nothing
 
-nukeIndex :: Repo -> IO ()
-nukeIndex r = nukeFile (localGitDir r </> "index")
+indexFile :: Repo -> FilePath
+indexFile r = localGitDir r </> "index"
 
 newtype GoodCommits = GoodCommits (S.Set Sha)
 
@@ -423,6 +422,9 @@ preRepair g = do
 		nukeFile headfile
 		writeFile headfile "ref: refs/heads/master"
 	explodePackedRefsFile g
+	unless (repoIsLocalBare g) $ do
+		let f = indexFile g
+		void $ tryIO $ allowWrite f
   where
 	headfile = localGitDir g </> "HEAD"
 	validhead s = "ref: refs/" `isPrefixOf` s || isJust (extractSha s)
@@ -517,7 +519,7 @@ runRepair' fsckresult forced referencerepo g = do
 				return (True, stillmissing, modifiedbranches)
 	
 	corruptedindex = do
-		nukeIndex g
+		nukeFile (indexFile g)
 		-- The corrupted index can prevent fsck from finding other
 		-- problems, so re-run repair.
 		fsckresult' <- findBroken False g
