@@ -50,6 +50,7 @@ cleanCorruptObjects :: FsckResults -> Repo -> IO (Maybe MissingObjects)
 cleanCorruptObjects fsckresults r = do
 	void $ explodePacks r
 	objs <- listLooseObjectShas r
+	mapM_ (tryIO . allowRead . looseObjectFile r) objs
 	bad <- findMissing objs r
 	void $ removeLoose r $ S.union bad (fromMaybe S.empty fsckresults)
 	-- Rather than returning the loose objects that were removed, re-run
