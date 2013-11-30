@@ -42,17 +42,16 @@ import qualified Data.ByteString.Lazy as L
 import Data.Tuple.Utils
 
 {- Given a set of bad objects found by git fsck, which may not
- - be complete, finds and removes all corrupt objects, and
- - returns a list of missing objects, which need to be
- - found elsewhere to finish recovery.
+ - be complete, finds and removes all corrupt objects,
+ - and returns missing objects.
  -}
-cleanCorruptObjects :: FsckResults -> Repo -> IO (Maybe MissingObjects)
+cleanCorruptObjects :: FsckResults -> Repo -> IO FsckResults
 cleanCorruptObjects fsckresults r = do
 	void $ explodePacks r
 	objs <- listLooseObjectShas r
 	mapM_ (tryIO . allowRead . looseObjectFile r) objs
 	bad <- findMissing objs r
-	void $ removeLoose r $ S.union bad (fromMaybe S.empty fsckresults)
+	void $ removeLoose r $ S.union bad (knownMissing fsckresults)
 	-- Rather than returning the loose objects that were removed, re-run
 	-- fsck. Other missing objects may have been in the packs,
 	-- and this way fsck will find them.
@@ -98,20 +97,17 @@ explodePacks r = do
  - If another clone of the repository exists locally, which might not be a
  - remote of the repo being repaired, its path can be passed as a reference
  - repository.
- 
- - Can also be run with Nothing, if it's not known which objects are
- - missing, just that some are. (Ie, fsck failed badly.)
  -}
-retrieveMissingObjects :: Maybe MissingObjects -> Maybe FilePath -> Repo -> IO (Maybe MissingObjects)
+retrieveMissingObjects :: FsckResults -> Maybe FilePath -> Repo -> IO FsckResults
 retrieveMissingObjects missing referencerepo r
-	| missing == Just S.empty = return $ Just S.empty
+	| not (foundBroken missing) = return missing
 	| otherwise = withTmpDir "tmprepo" $ \tmpdir -> do
 		unlessM (boolSystem "git" [Params "init", File tmpdir]) $
 			error $ "failed to create temp repository in " ++ tmpdir
 		tmpr <- Config.read =<< Construct.fromAbsPath tmpdir
 		stillmissing <- pullremotes tmpr (remotes r) fetchrefstags missing
-		if stillmissing == Just S.empty
-			then return $ Just S.empty
+		if S.null (knownMissing stillmissing)
+			then return stillmissing
 			else pullremotes tmpr (remotes r) fetchallrefs stillmissing
   where
 	pullremotes tmpr [] fetchrefs stillmissing = case referencerepo of
@@ -121,12 +117,12 @@ retrieveMissingObjects missing referencerepo r
 				void $ explodePacks tmpr
 				void $ copyObjects tmpr r
 				case stillmissing of
-					Nothing -> return $ Just S.empty
-					Just s -> Just <$> findMissing (S.toList s) r
+					FsckFailed -> return $ FsckFailed
+					FsckFoundMissing s -> FsckFoundMissing <$> findMissing (S.toList s) r
 			, return stillmissing
 			)
 	pullremotes tmpr (rmt:rmts) fetchrefs ms
-		| ms == Just S.empty = return $ Just S.empty
+		| not (foundBroken ms) = return ms
 		| otherwise = do
 			putStrLn $ "Trying to recover missing objects from remote " ++ repoDescribe rmt ++ "."
 			ifM (fetchfrom (repoLocation rmt) fetchrefs tmpr)
@@ -134,10 +130,10 @@ retrieveMissingObjects missing referencerepo r
 					void $ explodePacks tmpr
 					void $ copyObjects tmpr r
 					case ms of
-						Nothing -> pullremotes tmpr rmts fetchrefs ms
-						Just s -> do
+						FsckFailed -> pullremotes tmpr rmts fetchrefs ms
+						FsckFoundMissing s -> do
 							stillmissing <- findMissing (S.toList s) r
-							pullremotes tmpr rmts fetchrefs (Just stillmissing)
+							pullremotes tmpr rmts fetchrefs (FsckFoundMissing stillmissing)
 				, pullremotes tmpr rmts fetchrefs ms
 				)
 	fetchfrom fetchurl ps = runBool $
@@ -452,7 +448,7 @@ runRepair' fsckresult forced referencerepo g = do
 	missing <- cleanCorruptObjects fsckresult g
 	stillmissing <- retrieveMissingObjects missing referencerepo g
 	case stillmissing of
-		Just s
+		FsckFoundMissing s
 			| S.null s -> if repoIsLocalBare g
 				then successfulfinish S.empty []
 				else ifM (checkIndex S.empty g)
@@ -474,13 +470,13 @@ runRepair' fsckresult forced referencerepo g = do
 						, "missing objects could not be recovered!"
 						]
 					unsuccessfulfinish s
-		Nothing
+		FsckFailed
 			| forced -> ifM (pure (repoIsLocalBare g) <||> checkIndex S.empty g)
 				( do
-					missing' <- cleanCorruptObjects Nothing g
+					missing' <- cleanCorruptObjects FsckFailed g
 					case missing' of
-						Nothing -> return (False, S.empty, [])
-						Just stillmissing' -> continuerepairs stillmissing'
+						FsckFailed -> return (False, S.empty, [])
+						FsckFoundMissing stillmissing' -> continuerepairs stillmissing'
 				, corruptedindex
 				)
 			| otherwise -> unsuccessfulfinish S.empty
