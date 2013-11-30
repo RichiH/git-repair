@@ -25,6 +25,7 @@ import Git.Objects
 import Git.Sha
 import Git.Types
 import Git.Fsck
+import Git.Index
 import qualified Git.Config as Config
 import qualified Git.Construct as Construct
 import qualified Git.LsTree as LsTree
@@ -375,9 +376,6 @@ rewriteIndex missing r
 		Just blobtype -> Just <$>
 			UpdateIndex.stageFile sha blobtype file r
 	reinject _ = return Nothing
-
-indexFile :: Repo -> FilePath
-indexFile r = localGitDir r </> "index"
 
 newtype GoodCommits = GoodCommits (S.Set Sha)
 
