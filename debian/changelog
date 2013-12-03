@@ -1,3 +1,9 @@
+git-repair (1.20131123) UNRELEASED; urgency=low
+
+  * Fix build deps. Closes: #731179
+
+ -- Joey Hess <joeyh@debian.org>  Tue, 03 Dec 2013 13:32:19 -0400
+
 git-repair (1.20131122) unstable; urgency=low
 
   * Added test mode, which can be used to randomly corrupt test 

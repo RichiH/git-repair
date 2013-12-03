@@ -8,9 +8,11 @@ Build-Depends:
 	libghc-missingh-dev,
 	libghc-hslogger-dev,
 	libghc-network-dev,
-	libghc-ifelse-dev,
 	libghc-extensible-exceptions-dev,
 	libghc-unix-compat-dev,
+	libghc-ifelse-dev,
+	libghc-text-dev,
+	libghc-quickcheck2-dev,
 	libghc-utf8-string-dev,
 	libghc-async-dev,
 	libghc-optparse-applicative-dev
