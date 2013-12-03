@@ -1,0 +1,51 @@
+`git-repair` can repair various forms of damage to git repositories.
+
+It is a complement to `git fsck`, which finds problems, but does not fix
+them.
+
+As well as avoiding the need to rm -rf a damaged repository and re-clone,
+using git-repair can help rescue commits you've made to the damaged
+repository and not yet pushed out.
+
+## download
+
+* `git clone git://git-repair.branchable.com/ git-repair`
+* from [Hackage](http://hackage.haskell.org/package/git-repair)
+
+## install
+
+This is a Haskell program, developed as a spinoff of
+[git-annex](http://git-annex.branchable.com/).
+
+To build it, you will need to install the
+[Haskell Platform](http://www.haskell.org/platform/).
+
+Then to install it:
+
+	cabal update; cabal install git-repair --bindir=$HOME/bin
+
+## how it works
+
+`git-repair` starts by deleting all corrupt objects, and
+retreiving all missing objects that it can from the remotes of the
+repository.
+
+If that is not sufficient to fully recover the repository, it can also
+reset branches back to commits before the corruption happened, delete
+branches that are no longer available due to the lost data, and remove any
+missing files from the index. It will only do this if run with the
+`--force` option, since that rewrites history and throws out missing data.
+
+After running this command, you will probably want to run `git fsck` to
+verify it fixed the repository.
+
+Note that fsck may still complain about objects referenced by the reflog,
+or the stash, if they were unable to be recovered. This command does not
+try to clean up either the reflog or the stash. 
+
+Also note that the `--force` option never touches tags, even if they are no
+longer usable due to missing data, so fack may also find problems with
+tags.
+
+Since this command unpacks all packs in the repository, you may want to
+run `git gc` afterwards.

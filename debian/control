@@ -1,0 +1,35 @@
+Source: git-repair
+Section: utils
+Priority: optional
+Build-Depends: 
+	debhelper (>= 9),
+	ghc,
+	git,
+	libghc-missingh-dev,
+	libghc-hslogger-dev,
+	libghc-network-dev,
+	libghc-extensible-exceptions-dev,
+	libghc-unix-compat-dev,
+	libghc-ifelse-dev,
+	libghc-text-dev,
+	libghc-quickcheck2-dev,
+	libghc-utf8-string-dev,
+	libghc-async-dev,
+	libghc-optparse-applicative-dev
+Maintainer: Joey Hess <joeyh@debian.org>
+Standards-Version: 3.9.4
+Vcs-Git: git://git-repair.branchable.com/
+Homepage: http://git-repair.branchable.com/
+
+Package: git-repair
+Architecture: any
+Section: utils
+Depends: ${misc:Depends}, ${shlibs:Depends}, git, rsync
+Description: repair various forms of damage to git repositorie
+ git-repair can repair various forms of damage to git repositories.
+ .
+ It is a complement to git fsck, which finds problems, but does not fix them.
+ .
+ As well as avoiding the need to rm -rf a damaged repository and re-clone,
+ using git-repair can help rescue commits you've made to the damaged
+ repository and not yet pushed out.

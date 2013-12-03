@@ -1,0 +1,37 @@
+Name: git-repair
+Version: 1.20131122
+Cabal-Version: >= 1.6
+License: GPL
+Maintainer: Joey Hess <joey@kitenet.net>
+Author: Joey Hess
+Stability: Stable
+Copyright: 2013 Joey Hess
+License-File: GPL
+Build-Type: Custom
+Homepage: http://git-repair.branchable.com/
+Category: Utility
+Synopsis: repairs a damanged git repisitory
+Description:
+ git-repair can repair various forms of damage to git repositories.
+ .
+ It is a complement to git fsck, which finds problems, but does not fix
+ them.
+ .
+ As well as avoiding the need to rm -rf a damaged repository and re-clone,
+ using git-repair can help rescue commits you've made to the damaged
+ repository and not yet pushed out.
+
+Executable git-repair
+  Main-Is: git-repair.hs
+  GHC-Options: -Wall -threaded
+  Build-Depends: MissingH, hslogger, directory, filepath, containers, mtl,
+   network, extensible-exceptions, unix-compat, bytestring,
+   base >= 4.5, base < 5, IfElse, text, process, time, QuickCheck,
+   utf8-string, async, optparse-applicative
+
+  if (! os(windows))
+    Build-Depends: unix
+
+source-repository head
+  type: git
+  location: git://git-repair.branchable.com/
