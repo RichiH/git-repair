@@ -15,7 +15,6 @@ tests =
 	[ TestCase "version" getVersion
 	, TestCase "git" $ requireCmd "git" "git --version >/dev/null"
 	, TestCase "git version" getGitVersion
-	, TestCase "nice" $ testCmd "nice" "nice true >/dev/null"
 	]
 
 getGitVersion :: Test
