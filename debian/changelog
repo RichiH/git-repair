@@ -1,3 +1,9 @@
+git-repair (1.20131204) UNRELEASED; urgency=low
+
+  * Improve repair of index files in some situations.
+
+ -- Joey Hess <joeyh@debian.org>  Tue, 10 Dec 2013 15:46:35 -0400
+
 git-repair (1.20131203) unstable; urgency=low
 
   * Fix build deps. Closes: #731179
