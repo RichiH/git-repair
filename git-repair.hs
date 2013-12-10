@@ -59,7 +59,7 @@ main = execParser opts >>= go
 repair :: Settings -> IO ()
 repair settings = do
 	g <- Git.Config.read =<< Git.CurrentRepo.get
-	ifM (Git.Repair.successfulRepair <$> Git.Repair.runRepair (forced settings) g)
+	ifM (Git.Repair.successfulRepair <$> Git.Repair.runRepair Git.Repair.isTrackingBranch (forced settings) g)
 		( exitSuccess
 		, exitFailure
 		)
@@ -94,7 +94,7 @@ runTest settings damage = withTmpDir "tmprepo" $ \tmpdir -> do
 	g <- Git.Config.read =<< Git.Construct.fromPath cloneloc
 	Git.Destroyer.applyDamage damage g
 	repairstatus <- catchMaybeIO $ Git.Repair.successfulRepair
-		<$> Git.Repair.runRepair (forced settings) g
+		<$> Git.Repair.runRepair Git.Repair.isTrackingBranch (forced settings) g
 	case repairstatus of
 		Just True -> testResult repairstatus 
 			. Just . not . Git.Fsck.foundBroken
