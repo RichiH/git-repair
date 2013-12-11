@@ -1,0 +1,2 @@
+* git-reflog can fail if HEAD is missing.
+  Manually parse the reflog in this case (or supply a dummy HEAD?)
