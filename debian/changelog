@@ -2,6 +2,8 @@ git-repair (1.20131214) UNRELEASED; urgency=medium
 
   * Support old git versions from before git fsck --no-dangling was
     implemented.
+  * repair: Fix bug in packed refs file exploding code that caused a .gitrefs
+    directory to be created instead of .git/refs
 
  -- Joey Hess <joeyh@debian.org>  Mon, 13 Jan 2014 18:07:13 -0400
 
