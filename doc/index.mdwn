@@ -44,7 +44,7 @@ or the stash, if they were unable to be recovered. This command does not
 try to clean up either the reflog or the stash. 
 
 Also note that the `--force` option never touches tags, even if they are no
-longer usable due to missing data, so fack may also find problems with
+longer usable due to missing data, so fsck may also find problems with
 tags.
 
 Since this command unpacks all packs in the repository, you may want to
