@@ -4,6 +4,7 @@ git-repair (1.20140115) unstable; urgency=medium
     implemented.
   * Fix bug in packed refs file exploding code that caused a .gitrefs
     directory to be created instead of .git/refs
+  * Check git version at run time.
 
  -- Joey Hess <joeyh@debian.org>  Wed, 15 Jan 2014 16:53:30 -0400
 
