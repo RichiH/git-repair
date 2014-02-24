@@ -1,3 +1,10 @@
+git-repair (1.20140116) UNRELEASED; urgency=medium
+
+  * Optimise unpacking of pack files, and avoid repeated error
+    messages about corrupt pack files.
+
+ -- Joey Hess <joeyh@debian.org>  Mon, 24 Feb 2014 19:39:51 -0400
+
 git-repair (1.20140115) unstable; urgency=medium
 
   * Support old git versions from before git fsck --no-dangling was

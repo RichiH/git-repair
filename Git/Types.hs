@@ -47,15 +47,19 @@ type RemoteName = String
 
 {- A git ref. Can be a sha1, or a branch or tag name. -}
 newtype Ref = Ref String
-	deriving (Eq, Ord)
+	deriving (Eq, Ord, Read, Show)
 
-instance Show Ref where
-	show (Ref v) = v
+fromRef :: Ref -> String
+fromRef (Ref s) = s
 
 {- Aliases for Ref. -}
 type Branch = Ref
 type Sha = Ref
 type Tag = Ref
+
+{- A date in the format described in gitrevisions. Includes the
+ - braces, eg, "{yesterday}" -}
+newtype RefDate = RefDate String
 
 {- Types of objects that can be stored in git. -}
 data ObjectType = BlobObject | CommitObject | TreeObject
