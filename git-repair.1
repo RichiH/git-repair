@@ -28,6 +28,18 @@ stash.
 .PP
 Since this command unpacks all packs in the repository, you may want to
 run \fBgit gc\fP afterwards.
+.SH TESTING
+git-repair is able to test itself, by making a temporary copy
+of the git reposiory it's run in, damaging it in random ways, and checking
+that it can repair it so that git fsck reports no problems.
+.PP
+This is done using the --test parameter and associated --numtests and
+--retry parameters.
+.PP
+Note that the testing will sometimes find repositories that can only be
+repaired when --force is used; this is expected. On the other hand,
+if it fails to recover a repository with --force, then the testing has
+found a bug!
 .PP
 .SH AUTHOR
 Joey Hess <joey@kitenet.net>
