@@ -60,7 +60,7 @@ instance Arbitrary Damage where
  - are enumerated, sorted, and this is used as an index
  - into the list. (Wrapping around if higher than the length.) -}
 data FileSelector = FileSelector Int
-	deriving (Read, Show)
+	deriving (Read, Show, Eq)
 
 instance Arbitrary FileSelector where
 	arbitrary = FileSelector <$> oneof
@@ -129,13 +129,15 @@ applyDamage ds r = do
 			ScrambleFileMode s mode ->
 				withfile s $ \f ->
 					setFileMode f mode
-			SwapFiles a b -> 
-				withfile a $ \fa ->
-					withfile b $ \fb ->
-						withTmpFile "swap" $ \tmp _ -> do
-							moveFile fa tmp
-							moveFile fb fa
-							moveFile tmp fa
+			SwapFiles a b
+				| a == b -> noop
+				| otherwise -> 
+					withfile a $ \fa ->
+						withfile b $ \fb ->
+							withTmpFile "swap" $ \tmp _ -> do
+								moveFile fa tmp
+								moveFile fb fa
+								moveFile tmp fa
   where
   	-- A broken .git/config is not recoverable.
 	skipped f = f `elem` [ "config" ]
