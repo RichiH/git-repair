@@ -23,33 +23,30 @@ import Data.Word
 import System.PosixCompat.Types
 
 {- Ways to damange a git repository. -}
-data Damage = Damage DamageAction FileSelector
+data Damage
+	= Empty FileSelector
+	| Delete FileSelector
+	| Reverse FileSelector
+	| AppendGarbage FileSelector B.ByteString
+	| PrependGarbage FileSelector B.ByteString
+	| CorruptByte FileSelector Int Word8
+	| ScrambleFileMode FileSelector FileMode
 	deriving (Read, Show)
 
 instance Arbitrary Damage where
-	arbitrary = Damage <$> arbitrary <*> arbitrary
-
-data DamageAction
-	= Empty
-	| Delete
-	| Reverse
-	| AppendGarbage B.ByteString
-	| PrependGarbage B.ByteString
-	| CorruptByte Int Word8
-	| ScrambleFileMode FileMode
-	deriving (Read, Show)
-
-instance Arbitrary DamageAction where
 	arbitrary = oneof
-		[ pure Empty
-		, pure Delete
-		, pure Reverse
-		, AppendGarbage <$> garbage
-		, PrependGarbage <$> garbage
+		[ Empty <$> arbitrary
+		, Delete <$> arbitrary
+		, Reverse <$> arbitrary
+		, AppendGarbage <$> arbitrary <*> garbage
+		, PrependGarbage <$> arbitrary <*> garbage
 		, CorruptByte
-			<$> nonNegative arbitraryBoundedIntegral
+			<$> arbitrary
+			<*> nonNegative arbitraryBoundedIntegral
 			<*> arbitrary
-		, ScrambleFileMode <$> nonNegative arbitrarySizedIntegral
+		, ScrambleFileMode
+			<$> arbitrary
+			<*> nonNegative arbitrarySizedIntegral
 		]
 	  where
 		garbage = B.pack <$> arbitrary `suchThat` (not . null)
@@ -80,47 +77,56 @@ generateDamage = sample' (arbitrary :: Gen Damage)
 {- Applies Damage to a Repo, in a reproducible fashion
  - (as long as the Repo contains the same files each time). -}
 applyDamage :: [Damage] -> Repo -> IO ()
-applyDamage l r = do
+applyDamage ds r = do
 	contents <- sort . filter (not . skipped . takeFileName)
 		<$> dirContentsRecursive (localGitDir r)
-	forM_ l $ \(Damage action fileselector) -> do
-		let f = selectFile contents fileselector
-		-- Symlinks might be dangling, so are skipped.
-		-- If the file was already removed by a previous Damage,
-		-- it's skipped.
-		whenM (doesFileExist f) $
-			applyDamageAction action f
-				`catchIO` \e -> error ("Failed to apply " ++ show action ++ " " ++ show f ++ ": " ++ show e ++ "(total damage: " ++ show l ++ ")")
+	forM_ ds $ \d -> do
+		let withfile s a = do
+			let f = selectFile contents s
+			-- Symlinks might be dangling, so are skipped.
+			-- If the file was already removed by a previous Damage,
+			-- it's skipped.
+			whenM (doesFileExist f) $
+				a f `catchIO` \e -> error ("Failed to apply damage " ++ show d ++ " to " ++ show f ++ ": " ++ show e ++ "(total damage: " ++ show ds ++ ")")
+		case d of
+			Empty s -> withfile s $ \f ->
+				withSaneMode f $ do
+					nukeFile f
+					writeFile f ""
+			Reverse s -> withfile s $ \f ->
+				withSaneMode f $
+					B.writeFile f =<< B.reverse <$> B.readFile f
+			Delete s -> withfile s $ nukeFile
+			AppendGarbage s garbage ->
+				withfile s $ \f ->
+					withSaneMode f $
+					B.appendFile f garbage
+			PrependGarbage s garbage ->
+				withfile s $ \f ->
+					withSaneMode f $ do
+						b <- B.readFile f
+						B.writeFile f $ B.concat [garbage, b]
+			-- When the byte is past the end of the
+			-- file, wrap around. Does nothing to empty file.
+			CorruptByte s n garbage ->
+				withfile s $ \f ->
+					withSaneMode f $ do
+						b <- B.readFile f
+						let len = B.length b
+						unless (len == 0) $ do
+							let n' = n `mod` len
+							let (prefix, rest) = B.splitAt n' b
+							B.writeFile f $ B.concat
+								[prefix
+								, B.singleton garbage
+								, B.drop 1 rest
+								]
+			ScrambleFileMode s mode ->
+				withfile s $ \f ->
+					setFileMode f mode
   where
   	-- A broken .git/config is not recoverable.
 	skipped f = f `elem` [ "config" ]
-
-applyDamageAction :: DamageAction -> FilePath -> IO ()
-applyDamageAction Empty f = withSaneMode f $ do
-	nukeFile f
-	writeFile f ""
-applyDamageAction Reverse f = withSaneMode f $
-	B.writeFile f =<< B.reverse <$> B.readFile f
-applyDamageAction Delete f = nukeFile f
-applyDamageAction (AppendGarbage garbage) f = withSaneMode f $
-	B.appendFile f garbage
-applyDamageAction (PrependGarbage garbage) f = withSaneMode f $ do
-	b <- B.readFile f
-	B.writeFile f $ B.concat [garbage, b]
--- When the byte is past the end of the file, wrap around.
--- Does nothing to empty file.
-applyDamageAction (CorruptByte n garbage) f = withSaneMode f $ do
-	b <- B.readFile f
-	let len = B.length b
-	unless (len == 0) $ do
-		let n' = n `mod` len
-		let (prefix, rest) = B.splitAt n' b
-		B.writeFile f $ B.concat
-			[prefix
-			, B.singleton garbage
-			, B.drop 1 rest
-			]
-applyDamageAction (ScrambleFileMode mode) f = setFileMode f mode
 
 withSaneMode :: FilePath -> IO () -> IO ()
 withSaneMode f = withModifiedFileMode f (addModes [ownerWriteMode, ownerReadMode])
