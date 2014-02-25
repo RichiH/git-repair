@@ -2,7 +2,7 @@
  -
  - Use with caution!
  -
- - Copyright 2013 Joey Hess <joey@kitenet.net>
+ - Copyright 2013, 2014 Joey Hess <joey@kitenet.net>
  -
  - Licensed under the GNU GPL version 3 or higher.
  -}
@@ -17,6 +17,7 @@ import Common
 import Git
 import Utility.QuickCheck
 import Utility.FileMode
+import Utility.Tmp
 
 import qualified Data.ByteString as B
 import Data.Word
@@ -31,6 +32,7 @@ data Damage
 	| PrependGarbage FileSelector B.ByteString
 	| CorruptByte FileSelector Int Word8
 	| ScrambleFileMode FileSelector FileMode
+	| SwapFiles FileSelector FileSelector
 	deriving (Read, Show)
 
 instance Arbitrary Damage where
@@ -47,6 +49,9 @@ instance Arbitrary Damage where
 		, ScrambleFileMode
 			<$> arbitrary
 			<*> nonNegative arbitrarySizedIntegral
+		, SwapFiles
+			<$> arbitrary
+			<*> arbitrary
 		]
 	  where
 		garbage = B.pack <$> arbitrary `suchThat` (not . null)
@@ -124,6 +129,13 @@ applyDamage ds r = do
 			ScrambleFileMode s mode ->
 				withfile s $ \f ->
 					setFileMode f mode
+			SwapFiles a b -> 
+				withfile a $ \fa ->
+					withfile b $ \fb ->
+						withTmpFile "swap" $ \tmp _ -> do
+							moveFile fa tmp
+							moveFile fb fa
+							moveFile tmp fa
   where
   	-- A broken .git/config is not recoverable.
 	skipped f = f `elem` [ "config" ]

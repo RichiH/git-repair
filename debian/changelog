@@ -2,6 +2,7 @@ git-repair (1.20140116) UNRELEASED; urgency=medium
 
   * Optimise unpacking of pack files, and avoid repeated error
     messages about corrupt pack files.
+  * Add swapping 2 files test case.
 
  -- Joey Hess <joeyh@debian.org>  Mon, 24 Feb 2014 19:39:51 -0400
 
