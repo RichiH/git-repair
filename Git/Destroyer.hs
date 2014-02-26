@@ -83,7 +83,7 @@ generateDamage = sample' (arbitrary :: Gen Damage)
  - (as long as the Repo contains the same files each time). -}
 applyDamage :: [Damage] -> Repo -> IO ()
 applyDamage ds r = do
-	contents <- sort . filter (not . skipped . takeFileName)
+	contents <- sort . filter (not . skipped)
 		<$> dirContentsRecursive (localGitDir r)
 	forM_ ds $ \d -> do
 		let withfile s a = do
@@ -141,7 +141,7 @@ applyDamage ds r = do
  	-- A broken .git/config is not recoverable.
 	-- Don't damage hook scripts, to avoid running arbitrary code. ;)
 	skipped f = or
-		[ f == "config"
+		[ takeFileName f == "config"
 		, "hooks" `isPrefixOf` f
 		]
 
