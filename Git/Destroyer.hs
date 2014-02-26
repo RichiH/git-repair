@@ -129,11 +129,10 @@ applyDamage ds r = do
 			ScrambleFileMode s mode ->
 				withfile s $ \f ->
 					setFileMode f mode
-			SwapFiles a b
-				| a == b -> noop
-				| otherwise -> 
-					withfile a $ \fa ->
-						withfile b $ \fb ->
+			SwapFiles a b ->
+				withfile a $ \fa ->
+					withfile b $ \fb -> 
+						unless (fa == fb) $
 							withTmpFile "swap" $ \tmp _ -> do
 								moveFile fa tmp
 								moveFile fb fa
