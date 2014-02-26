@@ -139,8 +139,12 @@ applyDamage ds r = do
 								moveFile fb fa
 								moveFile tmp fa
   where
-  	-- A broken .git/config is not recoverable.
-	skipped f = f `elem` [ "config" ]
+ 	-- A broken .git/config is not recoverable.
+	-- Don't damage hook scripts, to avoid running arbitrary code. ;)
+	skipped f = or
+		[ f == "config"
+		, "hooks" `isPrefixOf` f
+		]
 
 withSaneMode :: FilePath -> IO () -> IO ()
 withSaneMode f = withModifiedFileMode f (addModes [ownerWriteMode, ownerReadMode])
