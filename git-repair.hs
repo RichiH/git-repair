@@ -52,8 +52,8 @@ main = execParser opts >>= go
 	desc = fullDesc
 		<> header "git-repair - repair a damanged git repository" 
 	go settings
-		| testMode settings = test settings
 		| retryTestMode settings = retryTest settings
+		| testMode settings = test settings
 		| otherwise = repair settings
 
 repair :: Settings -> IO ()
