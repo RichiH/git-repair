@@ -11,6 +11,7 @@ import Network.URI
 import qualified Data.Map as M
 import System.Posix.Types
 import Utility.SafeCommand
+import Utility.URI ()
 
 {- Support repositories on local disk, and repositories accessed via an URL.
  -
@@ -27,7 +28,7 @@ data RepoLocation
 	| LocalUnknown FilePath
 	| Url URI
 	| Unknown
-	deriving (Show, Eq)
+	deriving (Show, Eq, Ord)
 
 data Repo = Repo
 	{ location :: RepoLocation
@@ -41,7 +42,7 @@ data Repo = Repo
 	, gitEnv :: Maybe [(String, String)]
 	-- global options to pass to git when running git commands
 	, gitGlobalOpts :: [CommandParam]
-	} deriving (Show, Eq)
+	} deriving (Show, Eq, Ord)
 
 type RemoteName = String
 
