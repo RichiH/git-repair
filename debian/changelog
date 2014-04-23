@@ -1,8 +1,9 @@
-git-repair (1.20140228) UNRELEASED; urgency=medium
+git-repair (1.20140423) unstable; urgency=medium
 
   * Improve memory usage when git fsck finds a great many broken objects.
+  * Merge from git-annex.
 
- -- Joey Hess <joeyh@debian.org>  Mon, 10 Mar 2014 15:09:30 -0400
+ -- Joey Hess <joeyh@debian.org>  Wed, 23 Apr 2014 14:01:30 -0400
 
 git-repair (1.20140227) unstable; urgency=medium
 
