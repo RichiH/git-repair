@@ -1,5 +1,8 @@
 git-repair (1.20140424) UNRELEASED; urgency=medium
 
+  * Removing bad objects could leave fsck finding no more unreachable objects,
+    but some branches no longer accessible. Fix this, including support for
+    fixing up repositories that were incompletely repaired before.
   * Merge from git-annex.
 
  -- Joey Hess <joeyh@debian.org>  Mon, 21 Jul 2014 16:35:16 -0400
