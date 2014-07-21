@@ -2,7 +2,7 @@
  -
  - Copyright 2013 Joey Hess <joey@kitenet.net>
  -
- - Licensed under the GNU GPL version 3 or higher.
+ - License: BSD-2-clause
  -}
 
 {-# LANGUAGE CPP #-}
@@ -16,7 +16,6 @@ import Control.Concurrent.Async
 import System.Posix.Process
 #endif
 import qualified Control.Exception as E
-import System.Process (env)
 
 {- Runs an operation, at batch priority.
  -

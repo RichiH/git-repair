@@ -3,7 +3,7 @@
  - Copyright 2012, 2013 Joey Hess <joey@kitenet.net>
  - Copyright 2011 Bas van Dijk & Roel van Dijk
  -
- - Licensed under the GNU GPL version 3 or higher.
+ - License: BSD-2-clause
  -}
 
 {-# LANGUAGE CPP #-}
@@ -57,8 +57,7 @@ unboundDelay time = do
 waitForTermination :: IO ()
 waitForTermination = do
 #ifdef mingw32_HOST_OS
-	runEvery (Seconds 600) $
-		void getLine
+	forever $ threadDelaySeconds (Seconds 6000)
 #else
 	lock <- newEmptyMVar
 	let check sig = void $
