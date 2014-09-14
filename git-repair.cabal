@@ -1,6 +1,6 @@
 Name: git-repair
 Version: 1.20140914
-Cabal-Version: >= 1.6
+Cabal-Version: >= 1.8
 License: GPL
 Maintainer: Joey Hess <joey@kitenet.net>
 Author: Joey Hess
