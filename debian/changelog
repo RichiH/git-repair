@@ -1,8 +1,8 @@
-git-repair (1.20140816) UNRELEASED; urgency=medium
+git-repair (1.20140914) unstable; urgency=medium
 
   * Update to build with optparse-applicative 0.10. Closes: #761552
 
- -- Joey Hess <joeyh@debian.org>  Sun, 14 Sep 2014 12:48:08 -0400
+ -- Joey Hess <joeyh@debian.org>  Sun, 14 Sep 2014 12:48:27 -0400
 
 git-repair (1.20140815) unstable; urgency=medium
 
