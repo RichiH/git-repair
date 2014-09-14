@@ -15,7 +15,7 @@ Build-Depends:
 	libghc-quickcheck2-dev,
 	libghc-utf8-string-dev,
 	libghc-async-dev,
-	libghc-optparse-applicative-dev
+	libghc-optparse-applicative-dev (>= 0.10.0)
 Maintainer: Joey Hess <joeyh@debian.org>
 Standards-Version: 3.9.5
 Vcs-Git: git://git-repair.branchable.com/

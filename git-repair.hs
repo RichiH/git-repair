@@ -37,7 +37,7 @@ parseSettings = Settings
 		( long "retry"
 		<> help "Retry tests in git-repair-test.log"
 		)
-	<*> option
+	<*> option auto
 		( long "numtests"
 		<> short 'n'
 		<> metavar "N"

@@ -1,3 +1,9 @@
+git-repair (1.20140816) UNRELEASED; urgency=medium
+
+  * Update to build with optparse-applicative 0.10. Closes: #761552
+
+ -- Joey Hess <joeyh@debian.org>  Sun, 14 Sep 2014 12:48:08 -0400
+
 git-repair (1.20140815) unstable; urgency=medium
 
   * Removing bad objects could leave fsck finding no more unreachable objects,
