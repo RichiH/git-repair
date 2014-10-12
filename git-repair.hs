@@ -48,7 +48,7 @@ parseSettings = Settings
 main :: IO ()
 main = execParser opts >>= go
   where
-  	opts = info (helper <*> parseSettings) desc
+	opts = info (helper <*> parseSettings) desc
 	desc = fullDesc
 		<> header "git-repair - repair a damanged git repository" 
 	go settings
