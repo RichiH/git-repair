@@ -26,7 +26,7 @@ Executable git-repair
   Main-Is: git-repair.hs
   GHC-Options: -Wall -threaded
   Build-Depends: MissingH, hslogger, directory, filepath, containers, mtl,
-   network, extensible-exceptions, unix-compat, bytestring,
+   network, unix-compat, bytestring, exceptions (>= 0.6), transformers,
    base >= 4.5, base < 5, IfElse, text, process, time, QuickCheck,
    utf8-string, async, optparse-applicative (>= 0.10.0)
 

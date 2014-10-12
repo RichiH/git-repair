@@ -11,7 +11,6 @@ module Utility.Directory where
 
 import System.IO.Error
 import System.Directory
-import Control.Exception (throw, bracket)
 import Control.Monad
 import Control.Monad.IfElse
 import System.FilePath
@@ -57,7 +56,7 @@ dirContentsRecursive = dirContentsRecursiveSkipping (const False) True
 dirContentsRecursiveSkipping :: (FilePath -> Bool) -> Bool -> FilePath -> IO [FilePath]
 dirContentsRecursiveSkipping skipdir followsubdirsymlinks topdir = go [topdir]
   where
-  	go [] = return []
+	go [] = return []
 	go (dir:dirs)
 		| skipdir (takeFileName dir) = go dirs
 		| otherwise = unsafeInterleaveIO $ do
@@ -88,7 +87,7 @@ dirContentsRecursiveSkipping skipdir followsubdirsymlinks topdir = go [topdir]
 dirTreeRecursiveSkipping :: (FilePath -> Bool) -> FilePath -> IO [FilePath]
 dirTreeRecursiveSkipping skipdir topdir = go [] [topdir]
   where
-  	go c [] = return c
+	go c [] = return c
 	go c (dir:dirs)
 		| skipdir (takeFileName dir) = go c dirs
 		| otherwise = unsafeInterleaveIO $ do
@@ -114,7 +113,7 @@ moveFile src dest = tryIO (rename src dest) >>= onrename
 			whenM (isdir dest) rethrow
 			viaTmp mv dest undefined
 	  where
-		rethrow = throw e
+		rethrow = throwM e
 		mv tmp _ = do
 			ok <- boolSystem "mv" [Param "-f", Param src, Param tmp]
 			unless ok $ do
