@@ -1,9 +1,9 @@
-git-repair (1.20140915) UNRELEASED; urgency=medium
+git-repair (1.20141026) unstable; urgency=medium
 
   * Prevent auto gc from happening when fetching from a remote.
   * Merge from git-annex.
 
- -- Joey Hess <joeyh@debian.org>  Sun, 12 Oct 2014 14:31:33 -0400
+ -- Joey Hess <joeyh@debian.org>  Sun, 26 Oct 2014 13:37:30 -0400
 
 git-repair (1.20140914) unstable; urgency=medium
 
