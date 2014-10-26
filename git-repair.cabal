@@ -30,7 +30,9 @@ Executable git-repair
    base >= 4.5, base < 5, IfElse, text, process, time, QuickCheck,
    utf8-string, async, optparse-applicative (>= 0.10.0)
 
-  if (! os(windows))
+  if (os(windows))
+    Build-Depends: setenv
+  else
     Build-Depends: unix
 
 source-repository head
