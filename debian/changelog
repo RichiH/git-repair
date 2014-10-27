@@ -1,3 +1,9 @@
+git-repair (1.20141027) UNRELEASED; urgency=medium
+
+  * Adjust cabal file to support network-uri split.
+
+ -- Joey Hess <joeyh@debian.org>  Mon, 27 Oct 2014 11:06:23 -0400
+
 git-repair (1.20141026) unstable; urgency=medium
 
   * Prevent auto gc from happening when fetching from a remote.
