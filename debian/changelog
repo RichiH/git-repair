@@ -1,6 +1,8 @@
 git-repair (1.20141027) UNRELEASED; urgency=medium
 
   * Adjust cabal file to support network-uri split.
+  * Merge Build/ from git-annex, including removing a use of deprecated
+    System.Cmd.
 
  -- Joey Hess <joeyh@debian.org>  Mon, 27 Oct 2014 11:06:23 -0400
 

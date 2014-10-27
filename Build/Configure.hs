@@ -12,7 +12,7 @@ import Git.Version
 
 tests :: [TestCase]
 tests =
-	[ TestCase "version" getVersion
+	[ TestCase "version" (Config "packageversion" . StringConfig <$> getVersion)
 	, TestCase "git" $ requireCmd "git" "git --version >/dev/null"
 	, TestCase "git version" getGitVersion
 	]
