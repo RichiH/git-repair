@@ -49,3 +49,7 @@ tags.
 
 Since this command unpacks all packs in the repository, you may want to
 run `git gc` afterwards.
+
+## news
+
+[[!inline pages="news/* and !*/Discussion" show="4" archive=yes]]
