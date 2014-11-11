@@ -1,3 +1,9 @@
+git-repair (1.20141028) UNRELEASED; urgency=medium
+
+  * Debian package is now maintained by Gergely Nagy.
+
+ -- Joey Hess <joeyh@debian.org>  Tue, 11 Nov 2014 17:06:17 -0400
+
 git-repair (1.20141027) unstable; urgency=medium
 
   * Adjust cabal file to support network-uri split.

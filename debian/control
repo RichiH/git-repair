@@ -17,7 +17,7 @@ Build-Depends:
 	libghc-utf8-string-dev,
 	libghc-async-dev,
 	libghc-optparse-applicative-dev (>= 0.10.0)
-Maintainer: Joey Hess <joeyh@debian.org>
+Maintainer: Gergely Nagy <algernon@madhouse-project.org>
 Standards-Version: 3.9.5
 Vcs-Git: git://git-repair.branchable.com/
 Homepage: http://git-repair.branchable.com/
