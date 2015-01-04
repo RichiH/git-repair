@@ -1,7 +1,7 @@
 {- System.Process enhancements, including additional ways of running
  - processes, and logging.
  -
- - Copyright 2012 Joey Hess <joey@kitenet.net>
+ - Copyright 2012 Joey Hess <id@joeyh.name>
  -
  - License: BSD-2-clause
  -}
@@ -13,6 +13,7 @@ module Utility.Process (
 	CreateProcess(..),
 	StdHandle(..),
 	readProcess,
+	readProcess',
 	readProcessEnv,
 	writeReadProcessEnv,
 	forceSuccessProcess,
@@ -37,7 +38,7 @@ module Utility.Process (
 ) where
 
 import qualified System.Process
-import System.Process as X hiding (CreateProcess(..), createProcess, runInteractiveProcess, readProcess, readProcessWithExitCode, system, rawSystem, runInteractiveCommand, runProcess)
+import qualified System.Process as X hiding (CreateProcess(..), createProcess, runInteractiveProcess, readProcess, readProcessWithExitCode, system, rawSystem, runInteractiveCommand, runProcess)
 import System.Process hiding (createProcess, readProcess)
 import System.Exit
 import System.IO
@@ -46,7 +47,7 @@ import Control.Concurrent
 import qualified Control.Exception as E
 import Control.Monad
 #ifndef mingw32_HOST_OS
-import System.Posix.IO
+import qualified System.Posix.IO
 #else
 import Control.Applicative
 #endif
@@ -66,16 +67,18 @@ readProcess :: FilePath	-> [String] -> IO String
 readProcess cmd args = readProcessEnv cmd args Nothing
 
 readProcessEnv :: FilePath -> [String] -> Maybe [(String, String)] -> IO String
-readProcessEnv cmd args environ =
-	withHandle StdoutHandle createProcessSuccess p $ \h -> do
-		output  <- hGetContentsStrict h
-		hClose h
-		return output
+readProcessEnv cmd args environ = readProcess' p
   where
 	p = (proc cmd args)
 		{ std_out = CreatePipe
 		, env = environ
 		}
+
+readProcess' :: CreateProcess -> IO String
+readProcess' p = withHandle StdoutHandle createProcessSuccess p $ \h -> do
+	output  <- hGetContentsStrict h
+	hClose h
+	return output
 
 {- Runs an action to write to a process on its stdin, 
  - returns its output, and also allows specifying the environment.
@@ -172,9 +175,9 @@ processTranscript' cmd opts environ input = do
 #ifndef mingw32_HOST_OS
 {- This implementation interleves stdout and stderr in exactly the order
  - the process writes them. -}
-	(readf, writef) <- createPipe
-	readh <- fdToHandle readf
-	writeh <- fdToHandle writef
+	(readf, writef) <- System.Posix.IO.createPipe
+	readh <- System.Posix.IO.fdToHandle readf
+	writeh <- System.Posix.IO.fdToHandle writef
 	p@(_, _, _, pid) <- createProcess $
 		(proc cmd opts)
 			{ std_in = if isJust input then CreatePipe else Inherit

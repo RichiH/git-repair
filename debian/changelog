@@ -1,6 +1,7 @@
 git-repair (1.20141028) UNRELEASED; urgency=medium
 
   * Debian package is now maintained by Gergely Nagy.
+  * Fix build with process 1.2.1.0.
 
  -- Joey Hess <joeyh@debian.org>  Tue, 11 Nov 2014 17:06:17 -0400
 
