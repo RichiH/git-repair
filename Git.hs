@@ -30,6 +30,8 @@ module Git (
 	attributes,
 	hookPath,
 	assertLocal,
+	adjustPath,
+	relPath,
 ) where
 
 import Network.URI (uriPath, uriScheme, unEscapeString)
@@ -139,3 +141,29 @@ hookPath script repo = do
 #else
 	isexecutable f = isExecutable . fileMode <$> getFileStatus f
 #endif
+
+{- Makes the path to a local Repo be relative to the cwd. -}
+relPath :: Repo -> IO Repo
+relPath = adjustPath torel
+  where
+	torel p = do
+		p' <- relPathCwdToFile p
+		if null p'
+			then return "."
+			else return p'
+
+{- Adusts the path to a local Repo using the provided function. -}
+adjustPath :: (FilePath -> IO FilePath) -> Repo -> IO Repo
+adjustPath f r@(Repo { location = l@(Local { gitdir = d, worktree = w }) }) = do
+	d' <- f d
+	w' <- maybe (pure Nothing) (Just <$$> f) w
+	return $ r 
+		{ location = l 
+			{ gitdir = d'
+			, worktree = w'
+			}
+		}
+adjustPath f r@(Repo { location = LocalUnknown d }) = do
+	d' <- f d
+	return $ r { location = LocalUnknown d' }
+adjustPath _ r = pure r

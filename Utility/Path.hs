@@ -21,6 +21,7 @@ import Control.Applicative
 import qualified System.FilePath.Posix as Posix
 #else
 import System.Posix.Files
+import Utility.Exception
 #endif
 
 import qualified "MissingH" System.Path as MissingH
@@ -76,14 +77,12 @@ absNormPathUnix dir path = todos <$> MissingH.absNormPath (fromdos dir) (fromdos
 	todos = replace "/" "\\"
 #endif
 
-{- Returns the parent directory of a path.
- -
- - To allow this to be easily used in loops, which terminate upon reaching the
- - top, the parent of / is "" -}
-parentDir :: FilePath -> FilePath
+{- Just the parent directory of a path, or Nothing if the path has no
+ - parent (ie for "/") -}
+parentDir :: FilePath -> Maybe FilePath
 parentDir dir
-	| null dirs = ""
-	| otherwise = joinDrive drive (join s $ init dirs)
+	| null dirs = Nothing
+	| otherwise = Just $ joinDrive drive (join s $ init dirs)
   where
 	-- on Unix, the drive will be "/" when the dir is absolute, otherwise ""
 	(drive, path) = splitDrive dir
@@ -93,8 +92,8 @@ parentDir dir
 prop_parentDir_basics :: FilePath -> Bool
 prop_parentDir_basics dir
 	| null dir = True
-	| dir == "/" = parentDir dir == ""
-	| otherwise = p /= dir
+	| dir == "/" = parentDir dir == Nothing
+	| otherwise = p /= Just dir
   where
 	p = parentDir dir
 
@@ -255,7 +254,9 @@ fileNameLengthLimit :: FilePath -> IO Int
 fileNameLengthLimit _ = return 255
 #else
 fileNameLengthLimit dir = do
-	l <- fromIntegral <$> getPathVar dir FileNameLimit
+	-- getPathVar can fail due to statfs(2) overflow
+	l <- catchDefaultIO 0 $
+		fromIntegral <$> getPathVar dir FileNameLimit
 	if l <= 0
 		then return 255
 		else return $ minimum [l, 255]
@@ -267,7 +268,8 @@ fileNameLengthLimit dir = do
  - sane FilePath.
  -
  - All spaces and punctuation and other wacky stuff are replaced
- - with '_', except for '.' "../" will thus turn into ".._", which is safe.
+ - with '_', except for '.'
+ - "../" will thus turn into ".._", which is safe.
  -}
 sanitizeFilePath :: String -> FilePath
 sanitizeFilePath = map sanitize
