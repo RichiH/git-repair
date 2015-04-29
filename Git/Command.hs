@@ -1,6 +1,6 @@
 {- running git commands
  -
- - Copyright 2010-2013 Joey Hess <joey@kitenet.net>
+ - Copyright 2010-2013 Joey Hess <id@joeyh.name>
  -
  - Licensed under the GNU GPL version 3 or higher.
  -}
@@ -16,7 +16,7 @@ import qualified Utility.CoProcess as CoProcess
 
 {- Constructs a git command line operating on the specified repo. -}
 gitCommandLine :: [CommandParam] -> Repo -> [CommandParam]
-gitCommandLine params r@(Repo { location = l@(Local _ _ ) }) =
+gitCommandLine params r@(Repo { location = l@(Local { } ) }) =
 	setdir : settree ++ gitGlobalOpts r ++ params
   where
 	setdir = Param $ "--git-dir=" ++ gitdir l

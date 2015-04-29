@@ -1,3 +1,9 @@
+git-repair (1.20150107) UNRELEASED; urgency=medium
+
+  * Merge from git-annex.
+
+ -- Joey Hess <id@joeyh.name>  Wed, 29 Apr 2015 14:59:40 -0400
+
 git-repair (1.20150106) unstable; urgency=medium
 
   * Debian package is now maintained by Gergely Nagy.

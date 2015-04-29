@@ -1,6 +1,6 @@
 {- directory traversal and manipulation
  -
- - Copyright 2011-2014 Joey Hess <joey@kitenet.net>
+ - Copyright 2011-2014 Joey Hess <id@joeyh.name>
  -
  - License: BSD-2-clause
  -}
@@ -111,7 +111,7 @@ moveFile src dest = tryIO (rename src dest) >>= onrename
 			-- But, mv will move into a directory if
 			-- dest is one, which is not desired.
 			whenM (isdir dest) rethrow
-			viaTmp mv dest undefined
+			viaTmp mv dest ""
 	  where
 		rethrow = throwM e
 		mv tmp _ = do

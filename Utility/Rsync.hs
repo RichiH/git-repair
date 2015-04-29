@@ -1,6 +1,6 @@
 {- various rsync stuff
  -
- - Copyright 2010-2013 Joey Hess <joey@kitenet.net>
+ - Copyright 2010-2013 Joey Hess <id@joeyh.name>
  -
  - License: BSD-2-clause
  -}
@@ -92,13 +92,13 @@ rsyncUrlIsPath s
 	| rsyncUrlIsShell s = False
 	| otherwise = ':' `notElem` s
 
-{- Runs rsync, but intercepts its progress output and updates a meter.
- - The progress output is also output to stdout. 
+{- Runs rsync, but intercepts its progress output and updates a progress
+ - meter.
  -
  - The params must enable rsync's --progress mode for this to work.
  -}
-rsyncProgress :: MeterUpdate -> [CommandParam] -> IO Bool
-rsyncProgress meterupdate = commandMeter parseRsyncProgress meterupdate "rsync" . rsyncParamsFixup
+rsyncProgress :: OutputHandler -> MeterUpdate -> [CommandParam] -> IO Bool
+rsyncProgress oh meter = commandMeter parseRsyncProgress oh meter "rsync" . rsyncParamsFixup
 
 {- Strategy: Look for chunks prefixed with \r (rsync writes a \r before
  - the first progress output, and each thereafter). The first number

@@ -1,6 +1,6 @@
 {- git cat-file interface
  -
- - Copyright 2011, 2013 Joey Hess <joey@kitenet.net>
+ - Copyright 2011, 2013 Joey Hess <id@joeyh.name>
  -
  - Licensed under the GNU GPL version 3 or higher.
  -}
@@ -110,4 +110,4 @@ catTree h treeref = go <$> catObjectDetails h treeref
 	parsemodefile b = 
 		let (modestr, file) = separate (== ' ') (decodeBS b)
 		in (file, readmode modestr)
-	readmode = fst . fromMaybe (0, undefined) . headMaybe . readOct
+	readmode = fromMaybe 0 . fmap fst . headMaybe . readOct

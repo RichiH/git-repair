@@ -1,6 +1,6 @@
 {- safely running shell commands
  -
- - Copyright 2010-2013 Joey Hess <joey@kitenet.net>
+ - Copyright 2010-2013 Joey Hess <id@joeyh.name>
  -
  - License: BSD-2-clause
  -}
@@ -101,19 +101,26 @@ prop_idempotent_shellEscape s = [s] == (shellUnEscape . shellEscape) s
 prop_idempotent_shellEscape_multiword :: [String] -> Bool
 prop_idempotent_shellEscape_multiword s = s == (shellUnEscape . unwords . map shellEscape) s
 
-{- Segements a list of filenames into groups that are all below the manximum
- - command-line length limit. Does not preserve order. -}
-segmentXargs :: [FilePath] -> [[FilePath]]
-segmentXargs l = go l [] 0 []
+{- Segments a list of filenames into groups that are all below the maximum
+ - command-line length limit. -}
+segmentXargsOrdered :: [FilePath] -> [[FilePath]]
+segmentXargsOrdered = reverse . map reverse . segmentXargsUnordered
+
+{- Not preserving data is a little faster, and streams better when
+ - there are a great many filesnames. -}
+segmentXargsUnordered :: [FilePath] -> [[FilePath]]
+segmentXargsUnordered l = go l [] 0 []
   where
-	go [] c _ r = c:r
+	go [] c _ r = (c:r)
 	go (f:fs) c accumlen r
-		| len < maxlen && newlen > maxlen = go (f:fs) [] 0 (c:r)
+		| newlen > maxlen && len < maxlen = go (f:fs) [] 0 (c:r)
 		| otherwise = go fs (f:c) newlen r
 	  where
 		len = length f
 		newlen = accumlen + len
 
-	{- 10k of filenames per command, well under Linux's 20k limit;
-	 - allows room for other parameters etc. -}
+	{- 10k of filenames per command, well under 100k limit
+	 - of Linux (and OSX has a similar limit);
+	 - allows room for other parameters etc. Also allows for
+	 - eg, multibyte characters. -}
 	maxlen = 10240

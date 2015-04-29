@@ -1,6 +1,6 @@
 {- git ls-files interface
  -
- - Copyright 2010,2012 Joey Hess <joey@kitenet.net>
+ - Copyright 2010,2012 Joey Hess <id@joeyh.name>
  -
  - Licensed under the GNU GPL version 3 or higher.
  -}
@@ -131,9 +131,9 @@ typeChanged' ps l repo = do
 	(fs, cleanup) <- pipeNullSplit (prefix ++ ps ++ suffix) repo
 	-- git diff returns filenames relative to the top of the git repo;
 	-- convert to filenames relative to the cwd, like git ls-files.
-	let top = repoPath repo
+	top <- absPath (repoPath repo)
 	currdir <- getCurrentDirectory
-	return (map (\f -> relPathDirToFile currdir $ top </> f) fs, cleanup)
+	return (map (\f -> relPathDirToFileAbs currdir $ top </> f) fs, cleanup)
   where
 	prefix = [Params "diff --name-only --diff-filter=T -z"]
 	suffix = Param "--" : (if null l then [File "."] else map File l)
@@ -181,12 +181,13 @@ parseUnmerged s
 	| otherwise = case words metadata of
 		(rawblobtype:rawsha:rawstage:_) -> do
 			stage <- readish rawstage :: Maybe Int
-			unless (stage == 2 || stage == 3) $
-				fail undefined -- skip stage 1
-			blobtype <- readBlobType rawblobtype
-			sha <- extractSha rawsha
-			return $ InternalUnmerged (stage == 2) file
-				(Just blobtype) (Just sha)
+			if stage /= 2 && stage /= 3
+				then Nothing
+				else do
+					blobtype <- readBlobType rawblobtype
+					sha <- extractSha rawsha
+					return $ InternalUnmerged (stage == 2) file
+						(Just blobtype) (Just sha)
 		_ -> Nothing
   where
 	(metadata, file) = separate (== '\t') s

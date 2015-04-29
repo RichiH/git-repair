@@ -1,6 +1,6 @@
 {- git branch stuff
  -
- - Copyright 2011 Joey Hess <joey@kitenet.net>
+ - Copyright 2011 Joey Hess <id@joeyh.name>
  -
  - Licensed under the GNU GPL version 3 or higher.
  -}
@@ -37,14 +37,11 @@ current r = do
 {- The current branch, which may not really exist yet. -}
 currentUnsafe :: Repo -> IO (Maybe Git.Ref)
 currentUnsafe r = parse . firstLine
-	<$> pipeReadStrict [Param "symbolic-ref", Param $ fromRef Git.Ref.headRef] r
+	<$> pipeReadStrict [Param "symbolic-ref", Param "-q", Param $ fromRef Git.Ref.headRef] r
   where
 	parse l
 		| null l = Nothing
 		| otherwise = Just $ Git.Ref l
-
-currentSha :: Repo -> IO (Maybe Git.Sha)
-currentSha r = maybe (pure Nothing) (`Git.Ref.sha` r) =<< current r
 
 {- Checks if the second branch has any commits not present on the first
  - branch. -}
