@@ -26,7 +26,7 @@ Package: git-repair
 Architecture: any
 Section: utils
 Depends: ${misc:Depends}, ${shlibs:Depends}, git, rsync
-Description: repair various forms of damage to git repositorie
+Description: repair various forms of damage to git repositories
  git-repair can repair various forms of damage to git repositories.
  .
  It is a complement to git fsck, which finds problems, but does not fix them.
