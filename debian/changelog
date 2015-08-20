@@ -1,3 +1,12 @@
+git-repair (1.20150106-1) unstable; urgency=medium
+
+  * Package 1.20150106
+  * Update dependencies (Closes: #789977)
+  * Take over maintenance of package
+  * Bump standards version to 3.9.6
+
+ -- Richard Hartmann <richih@debian.org>  Thu, 20 Aug 2015 11:24:46 +0200
+
 git-repair (1.20150106) unstable; urgency=medium
 
   * Debian package is now maintained by Gergely Nagy.

@@ -16,9 +16,10 @@ Build-Depends:
 	libghc-quickcheck2-dev,
 	libghc-utf8-string-dev,
 	libghc-async-dev,
-	libghc-optparse-applicative-dev (>= 0.10.0)
-Maintainer: Gergely Nagy <algernon@madhouse-project.org>
-Standards-Version: 3.9.5
+	libghc-optparse-applicative-dev (>= 0.10.0),
+	libghc-network-uri-dev
+Maintainer: Richard Hartmann <richih@debian.org>
+Standards-Version: 3.9.6
 Vcs-Git: git://git-repair.branchable.com/
 Homepage: http://git-repair.branchable.com/
 
