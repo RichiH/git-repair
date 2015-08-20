@@ -1,3 +1,9 @@
+git-repair (1.20150106-2) unstable; urgency=medium
+
+  * Fix typo in description
+
+ -- Richard Hartmann <richih@debian.org>  Thu, 20 Aug 2015 13:41:50 +0200
+
 git-repair (1.20150106-1) unstable; urgency=medium
 
   * Package 1.20150106
