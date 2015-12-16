@@ -99,7 +99,7 @@ retrieveMissingObjects :: FsckResults -> Maybe FilePath -> Repo -> IO FsckResult
 retrieveMissingObjects missing referencerepo r
 	| not (foundBroken missing) = return missing
 	| otherwise = withTmpDir "tmprepo" $ \tmpdir -> do
-		unlessM (boolSystem "git" [Params "init", File tmpdir]) $
+		unlessM (boolSystem "git" [Param "init", File tmpdir]) $
 			error $ "failed to create temp repository in " ++ tmpdir
 		tmpr <- Config.read =<< Construct.fromAbsPath tmpdir
 		stillmissing <- pullremotes tmpr (remotes r) fetchrefstags missing
@@ -140,7 +140,9 @@ retrieveMissingObjects missing referencerepo r
 		ps' = 
 			[ Param "fetch"
 			, Param fetchurl
-			, Params "--force --update-head-ok --quiet"
+			, Param "--force"
+			, Param "--update-head-ok"
+			, Param "--quiet"
 			] ++ ps
 		fetchr' = fetchr { gitGlobalOpts = gitGlobalOpts fetchr ++ nogc }
 		nogc = [ Param "-c", Param "gc.auto=0" ]
@@ -339,7 +341,7 @@ verifyTree :: MissingObjects -> Sha -> Repo -> IO Bool
 verifyTree missing treesha r
 	| S.member treesha missing = return False
 	| otherwise = do
-		(ls, cleanup) <- pipeNullSplit (LsTree.lsTreeParams treesha) r
+		(ls, cleanup) <- pipeNullSplit (LsTree.lsTreeParams treesha []) r
 		let objshas = map (extractSha . LsTree.sha . LsTree.parseLsTree) ls
 		if any isNothing objshas || any (`S.member` missing) (catMaybes objshas)
 			then do

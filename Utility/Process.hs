@@ -1,12 +1,13 @@
 {- System.Process enhancements, including additional ways of running
  - processes, and logging.
  -
- - Copyright 2012 Joey Hess <id@joeyh.name>
+ - Copyright 2012-2015 Joey Hess <id@joeyh.name>
  -
  - License: BSD-2-clause
  -}
 
 {-# LANGUAGE CPP, Rank2Types #-}
+{-# OPTIONS_GHC -fno-warn-tabs #-}
 
 module Utility.Process (
 	module X,
@@ -30,6 +31,7 @@ module Utility.Process (
 	withQuietOutput,
 	feedWithQuietOutput,
 	createProcess,
+	waitForProcess,
 	startInteractiveProcess,
 	stdinHandle,
 	stdoutHandle,
@@ -39,9 +41,12 @@ module Utility.Process (
 	devNull,
 ) where
 
-import qualified System.Process
-import qualified System.Process as X hiding (CreateProcess(..), createProcess, runInteractiveProcess, readProcess, readProcessWithExitCode, system, rawSystem, runInteractiveCommand, runProcess)
-import System.Process hiding (createProcess, readProcess)
+import qualified Utility.Process.Shim
+import qualified Utility.Process.Shim as X hiding (CreateProcess(..), createProcess, runInteractiveProcess, readProcess, readProcessWithExitCode, system, rawSystem, runInteractiveCommand, runProcess)
+import Utility.Process.Shim hiding (createProcess, readProcess, waitForProcess)
+import Utility.Misc
+import Utility.Exception
+
 import System.Exit
 import System.IO
 import System.Log.Logger
@@ -54,17 +59,15 @@ import qualified System.Posix.IO
 import Control.Applicative
 #endif
 import Data.Maybe
-
-import Utility.Misc
-import Utility.Exception
+import Prelude
 
 type CreateProcessRunner = forall a. CreateProcess -> ((Maybe Handle, Maybe Handle, Maybe Handle, ProcessHandle) -> IO a) -> IO a
 
 data StdHandle = StdinHandle | StdoutHandle | StderrHandle
 	deriving (Eq)
 
-{- Normally, when reading from a process, it does not need to be fed any
- - standard input. -}
+-- | Normally, when reading from a process, it does not need to be fed any
+-- standard input.
 readProcess :: FilePath	-> [String] -> IO String
 readProcess cmd args = readProcessEnv cmd args Nothing
 
@@ -82,9 +85,8 @@ readProcess' p = withHandle StdoutHandle createProcessSuccess p $ \h -> do
 	hClose h
 	return output
 
-{- Runs an action to write to a process on its stdin, 
- - returns its output, and also allows specifying the environment.
- -}
+-- | Runs an action to write to a process on its stdin, 
+-- returns its output, and also allows specifying the environment.
 writeReadProcessEnv
 	:: FilePath
 	-> [String]
@@ -124,8 +126,8 @@ writeReadProcessEnv cmd args environ writestdin adjusthandle = do
 		, env = environ
 		}
 
-{- Waits for a ProcessHandle, and throws an IOError if the process
- - did not exit successfully. -}
+-- | Waits for a ProcessHandle, and throws an IOError if the process
+-- did not exit successfully.
 forceSuccessProcess :: CreateProcess -> ProcessHandle -> IO ()
 forceSuccessProcess p pid = do
 	code <- waitForProcess pid
@@ -133,10 +135,10 @@ forceSuccessProcess p pid = do
 		ExitSuccess -> return ()
 		ExitFailure n -> fail $ showCmd p ++ " exited " ++ show n
 
-{- Waits for a ProcessHandle and returns True if it exited successfully.
- - Note that using this with createProcessChecked will throw away
- - the Bool, and is only useful to ignore the exit code of a process,
- - while still waiting for it. -}
+-- | Waits for a ProcessHandle and returns True if it exited successfully.
+-- Note that using this with createProcessChecked will throw away
+-- the Bool, and is only useful to ignore the exit code of a process,
+-- while still waiting for it. -}
 checkSuccessProcess :: ProcessHandle -> IO Bool
 checkSuccessProcess pid = do
 	code <- waitForProcess pid
@@ -147,13 +149,13 @@ ignoreFailureProcess pid = do
 	void $ waitForProcess pid
 	return True
 
-{- Runs createProcess, then an action on its handles, and then
- - forceSuccessProcess. -}
+-- | Runs createProcess, then an action on its handles, and then
+-- forceSuccessProcess.
 createProcessSuccess :: CreateProcessRunner
 createProcessSuccess p a = createProcessChecked (forceSuccessProcess p) p a
 
-{- Runs createProcess, then an action on its handles, and then
- - a checker action on its exit code, which must wait for the process. -}
+-- | Runs createProcess, then an action on its handles, and then
+-- a checker action on its exit code, which must wait for the process.
 createProcessChecked :: (ProcessHandle -> IO b) -> CreateProcessRunner
 createProcessChecked checker p a = do
 	t@(_, _, _, pid) <- createProcess p
@@ -161,31 +163,30 @@ createProcessChecked checker p a = do
 	_ <- checker pid
 	either E.throw return r
 
-{- Leaves the process running, suitable for lazy streaming.
- - Note: Zombies will result, and must be waited on. -}
+-- | Leaves the process running, suitable for lazy streaming.
+-- Note: Zombies will result, and must be waited on.
 createBackgroundProcess :: CreateProcessRunner
 createBackgroundProcess p a = a =<< createProcess p
 
-{- Runs a process, optionally feeding it some input, and
- - returns a transcript combining its stdout and stderr, and
- - whether it succeeded or failed. -}
+-- | Runs a process, optionally feeding it some input, and
+-- returns a transcript combining its stdout and stderr, and
+-- whether it succeeded or failed.
 processTranscript :: String -> [String] -> (Maybe String) -> IO (String, Bool)
-processTranscript cmd opts input = processTranscript' cmd opts Nothing input
+processTranscript = processTranscript' id
 
-processTranscript' :: String -> [String] -> Maybe [(String, String)] -> (Maybe String) -> IO (String, Bool)
-processTranscript' cmd opts environ input = do
+processTranscript' :: (CreateProcess -> CreateProcess) -> String -> [String] -> Maybe String -> IO (String, Bool)
+processTranscript' modproc cmd opts input = do
 #ifndef mingw32_HOST_OS
 {- This implementation interleves stdout and stderr in exactly the order
  - the process writes them. -}
 	(readf, writef) <- System.Posix.IO.createPipe
 	readh <- System.Posix.IO.fdToHandle readf
 	writeh <- System.Posix.IO.fdToHandle writef
-	p@(_, _, _, pid) <- createProcess $
+	p@(_, _, _, pid) <- createProcess $ modproc $
 		(proc cmd opts)
 			{ std_in = if isJust input then CreatePipe else Inherit
 			, std_out = UseHandle writeh
 			, std_err = UseHandle writeh
-			, env = environ
 			}
 	hClose writeh
 
@@ -197,12 +198,11 @@ processTranscript' cmd opts environ input = do
 	return (transcript, ok)
 #else
 {- This implementation for Windows puts stderr after stdout. -}
-	p@(_, _, _, pid) <- createProcess $
+	p@(_, _, _, pid) <- createProcess $ modproc $
 		(proc cmd opts)
 			{ std_in = if isJust input then CreatePipe else Inherit
 			, std_out = CreatePipe
 			, std_err = CreatePipe
-			, env = environ
 			}
 
 	getout <- mkreader (stdoutHandle p)
@@ -232,9 +232,9 @@ processTranscript' cmd opts environ input = do
 		hClose inh
 	writeinput Nothing _ = return ()
 
-{- Runs a CreateProcessRunner, on a CreateProcess structure, that
- - is adjusted to pipe only from/to a single StdHandle, and passes
- - the resulting Handle to an action. -}
+-- | Runs a CreateProcessRunner, on a CreateProcess structure, that
+-- is adjusted to pipe only from/to a single StdHandle, and passes
+-- the resulting Handle to an action.
 withHandle
 	:: StdHandle
 	-> CreateProcessRunner
@@ -256,7 +256,7 @@ withHandle h creator p a = creator p' $ a . select
 		| h == StderrHandle =
 			(stderrHandle, base { std_err = CreatePipe })
 
-{- Like withHandle, but passes (stdin, stdout) handles to the action. -}
+-- | Like withHandle, but passes (stdin, stdout) handles to the action.
 withIOHandles
 	:: CreateProcessRunner
 	-> CreateProcess
@@ -270,7 +270,7 @@ withIOHandles creator p a = creator p' $ a . ioHandles
 		, std_err = Inherit
 		}
 
-{- Like withHandle, but passes (stdout, stderr) handles to the action. -}
+-- | Like withHandle, but passes (stdout, stderr) handles to the action.
 withOEHandles
 	:: CreateProcessRunner
 	-> CreateProcess
@@ -284,8 +284,8 @@ withOEHandles creator p a = creator p' $ a . oeHandles
 		, std_err = CreatePipe
 		}
 
-{- Forces the CreateProcessRunner to run quietly;
- - both stdout and stderr are discarded. -}
+-- | Forces the CreateProcessRunner to run quietly;
+-- both stdout and stderr are discarded.
 withQuietOutput
 	:: CreateProcessRunner
 	-> CreateProcess
@@ -297,8 +297,8 @@ withQuietOutput creator p = withFile devNull WriteMode $ \nullh -> do
 		}
 	creator p' $ const $ return ()
 
-{- Stdout and stderr are discarded, while the process is fed stdin
- - from the handle. -}
+-- | Stdout and stderr are discarded, while the process is fed stdin
+-- from the handle.
 feedWithQuietOutput
 	:: CreateProcessRunner
 	-> CreateProcess
@@ -319,11 +319,11 @@ devNull = "/dev/null"
 devNull = "NUL"
 #endif
 
-{- Extract a desired handle from createProcess's tuple.
- - These partial functions are safe as long as createProcess is run
- - with appropriate parameters to set up the desired handle.
- - Get it wrong and the runtime crash will always happen, so should be
- - easily noticed. -}
+-- | Extract a desired handle from createProcess's tuple.
+-- These partial functions are safe as long as createProcess is run
+-- with appropriate parameters to set up the desired handle.
+-- Get it wrong and the runtime crash will always happen, so should be
+-- easily noticed.
 type HandleExtractor = (Maybe Handle, Maybe Handle, Maybe Handle, ProcessHandle) -> Handle
 stdinHandle :: HandleExtractor
 stdinHandle (Just h, _, _, _) = h
@@ -344,31 +344,15 @@ oeHandles _ = error "expected oeHandles"
 processHandle :: (Maybe Handle, Maybe Handle, Maybe Handle, ProcessHandle) -> ProcessHandle
 processHandle (_, _, _, pid) = pid
 
-{- Debugging trace for a CreateProcess. -}
-debugProcess :: CreateProcess -> IO ()
-debugProcess p = do
-	debugM "Utility.Process" $ unwords
-		[ action ++ ":"
-		, showCmd p
-		]
-  where
-	action
-		| piped (std_in p) && piped (std_out p) = "chat"
-		| piped (std_in p)                      = "feed"
-		| piped (std_out p)                     = "read"
-		| otherwise                             = "call"
-	piped Inherit = False
-	piped _ = True
-
-{- Shows the command that a CreateProcess will run. -}
+-- | Shows the command that a CreateProcess will run.
 showCmd :: CreateProcess -> String
 showCmd = go . cmdspec
   where
 	go (ShellCommand s) = s
 	go (RawCommand c ps) = c ++ " " ++ show ps
 
-{- Starts an interactive process. Unlike runInteractiveProcess in
- - System.Process, stderr is inherited. -}
+-- | Starts an interactive process. Unlike runInteractiveProcess in
+-- System.Process, stderr is inherited.
 startInteractiveProcess
 	:: FilePath
 	-> [String]
@@ -384,8 +368,30 @@ startInteractiveProcess cmd args environ = do
 	(Just from, Just to, _, pid) <- createProcess p
 	return (pid, to, from)
 
-{- Wrapper around System.Process function that does debug logging. -}
+-- | Wrapper around 'System.Process.createProcess' that does debug logging.
 createProcess :: CreateProcess -> IO (Maybe Handle, Maybe Handle, Maybe Handle, ProcessHandle)
 createProcess p = do
 	debugProcess p
-	System.Process.createProcess p
+	Utility.Process.Shim.createProcess p
+
+-- | Debugging trace for a CreateProcess.
+debugProcess :: CreateProcess -> IO ()
+debugProcess p = debugM "Utility.Process" $ unwords
+	[ action ++ ":"
+	, showCmd p
+	]
+  where
+	action
+		| piped (std_in p) && piped (std_out p) = "chat"
+		| piped (std_in p)                      = "feed"
+		| piped (std_out p)                     = "read"
+		| otherwise                             = "call"
+	piped Inherit = False
+	piped _ = True
+
+-- | Wrapper around 'System.Process.waitForProcess' that does debug logging.
+waitForProcess ::  ProcessHandle -> IO ExitCode
+waitForProcess h = do
+	r <- Utility.Process.Shim.waitForProcess h
+	debugM "Utility.Process" ("process done " ++ show r)
+	return r

@@ -6,27 +6,29 @@
  -}
 
 {-# LANGUAGE CPP #-}
+{-# OPTIONS_GHC -fno-warn-tabs #-}
 
 module Utility.Directory where
 
 import System.IO.Error
 import System.Directory
 import Control.Monad
-import Control.Monad.IfElse
 import System.FilePath
 import Control.Applicative
 import Control.Concurrent
 import System.IO.Unsafe (unsafeInterleaveIO)
 import Data.Maybe
+import Prelude
 
 #ifdef mingw32_HOST_OS
 import qualified System.Win32 as Win32
 #else
 import qualified System.Posix as Posix
+import Utility.SafeCommand
+import Control.Monad.IfElse
 #endif
 
 import Utility.PosixFiles
-import Utility.SafeCommand
 import Utility.Tmp
 import Utility.Exception
 import Utility.Monad
@@ -105,21 +107,32 @@ moveFile src dest = tryIO (rename src dest) >>= onrename
 	onrename (Left e)
 		| isPermissionError e = rethrow
 		| isDoesNotExistError e = rethrow
-		| otherwise = do
-			-- copyFile is likely not as optimised as
-			-- the mv command, so we'll use the latter.
-			-- But, mv will move into a directory if
-			-- dest is one, which is not desired.
-			whenM (isdir dest) rethrow
-			viaTmp mv dest ""
+		| otherwise = viaTmp mv dest ""
 	  where
 		rethrow = throwM e
+
 		mv tmp _ = do
+		-- copyFile is likely not as optimised as
+		-- the mv command, so we'll use the command.
+		--
+		-- But, while Windows has a "mv", it does not seem very
+		-- reliable, so use copyFile there.
+#ifndef mingw32_HOST_OS	
+			-- If dest is a directory, mv would move the file
+			-- into it, which is not desired.
+			whenM (isdir dest) rethrow
 			ok <- boolSystem "mv" [Param "-f", Param src, Param tmp]
+			let e' = e
+#else
+			r <- tryIO $ copyFile src tmp
+			let (ok, e') = case r of
+				Left err -> (False, err)
+				Right _ -> (True, e)
+#endif
 			unless ok $ do
 				-- delete any partial
 				_ <- tryIO $ removeFile tmp
-				rethrow
+				throwM e'
 
 	isdir f = do
 		r <- tryIO $ getFileStatus f

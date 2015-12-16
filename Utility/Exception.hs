@@ -1,11 +1,12 @@
 {- Simple IO exception handling (and some more)
  -
- - Copyright 2011-2014 Joey Hess <id@joeyh.name>
+ - Copyright 2011-2015 Joey Hess <id@joeyh.name>
  -
  - License: BSD-2-clause
  -}
 
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# OPTIONS_GHC -fno-warn-tabs #-}
 
 module Utility.Exception (
 	module X,
@@ -19,6 +20,8 @@ module Utility.Exception (
 	catchNonAsync,
 	tryNonAsync,
 	tryWhenExists,
+	catchIOErrorType,
+	IOErrorType(..)
 ) where
 
 import Control.Monad.Catch as X hiding (Handler)
@@ -26,7 +29,9 @@ import qualified Control.Monad.Catch as M
 import Control.Exception (IOException, AsyncException)
 import Control.Monad
 import Control.Monad.IO.Class (liftIO, MonadIO)
-import System.IO.Error (isDoesNotExistError)
+import System.IO.Error (isDoesNotExistError, ioeGetErrorType)
+import GHC.IO.Exception (IOErrorType(..))
+
 import Utility.Data
 
 {- Catches IO errors and returns a Bool -}
@@ -35,10 +40,7 @@ catchBoolIO = catchDefaultIO False
 
 {- Catches IO errors and returns a Maybe -}
 catchMaybeIO :: MonadCatch m => m a -> m (Maybe a)
-catchMaybeIO a = do
-	catchDefaultIO Nothing $ do
-		v <- a
-		return (Just v)
+catchMaybeIO a = catchDefaultIO Nothing $ a >>= (return . Just)
 
 {- Catches IO errors and returns a default value. -}
 catchDefaultIO :: MonadCatch m => a -> m a -> m a
@@ -86,3 +88,12 @@ tryWhenExists :: MonadCatch m => m a -> m (Maybe a)
 tryWhenExists a = do
 	v <- tryJust (guard . isDoesNotExistError) a
 	return (eitherToMaybe v)
+
+{- Catches only IO exceptions of a particular type.
+ - Ie, use HardwareFault to catch disk IO errors. -}
+catchIOErrorType :: MonadCatch m => IOErrorType -> (IOException -> m a) -> m a -> m a
+catchIOErrorType errtype onmatchingerr a = catchIO a onlymatching
+  where
+	onlymatching e
+		| ioeGetErrorType e == errtype = onmatchingerr e
+		| otherwise = throwM e

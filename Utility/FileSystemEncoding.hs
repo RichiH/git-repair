@@ -6,12 +6,14 @@
  -}
 
 {-# LANGUAGE CPP #-}
+{-# OPTIONS_GHC -fno-warn-tabs #-}
 
 module Utility.FileSystemEncoding (
 	fileEncoding,
 	withFilePath,
 	md5FilePath,
 	decodeBS,
+	encodeBS,
 	decodeW8,
 	encodeW8,
 	encodeW8NUL,
@@ -27,11 +29,14 @@ import System.IO.Unsafe
 import qualified Data.Hash.MD5 as MD5
 import Data.Word
 import Data.Bits.Utils
+import Data.List
 import Data.List.Utils
 import qualified Data.ByteString.Lazy as L
 #ifdef mingw32_HOST_OS
 import qualified Data.ByteString.Lazy.UTF8 as L8
 #endif
+
+import Utility.Exception
 
 {- Sets a Handle to use the filesystem encoding. This causes data
  - written or read from it to be encoded/decoded the same
@@ -66,12 +71,16 @@ withFilePath fp f = Encoding.getFileSystemEncoding
  - only allows doing this conversion with CStrings, and the CString buffer
  - is allocated, used, and deallocated within the call, with no side
  - effects.
+ -
+ - If the FilePath contains a value that is not legal in the filesystem
+ - encoding, rather than thowing an exception, it will be returned as-is.
  -}
 {-# NOINLINE _encodeFilePath #-}
 _encodeFilePath :: FilePath -> String
 _encodeFilePath fp = unsafePerformIO $ do
 	enc <- Encoding.getFileSystemEncoding
-	GHC.withCString enc fp $ GHC.peekCString Encoding.char8
+	GHC.withCString enc fp (GHC.peekCString Encoding.char8)
+		`catchNonAsync` (\_ -> return fp)
 
 {- Encodes a FilePath into a Md5.Str, applying the filesystem encoding. -}
 md5FilePath :: FilePath -> MD5.Str
@@ -80,11 +89,19 @@ md5FilePath = MD5.Str . _encodeFilePath
 {- Decodes a ByteString into a FilePath, applying the filesystem encoding. -}
 decodeBS :: L.ByteString -> FilePath
 #ifndef mingw32_HOST_OS
-decodeBS = encodeW8 . L.unpack
+decodeBS = encodeW8NUL . L.unpack
 #else
 {- On Windows, we assume that the ByteString is utf-8, since Windows
  - only uses unicode for filenames. -}
 decodeBS = L8.toString
+#endif
+
+{- Encodes a FilePath into a ByteString, applying the filesystem encoding. -}
+encodeBS :: FilePath -> L.ByteString
+#ifndef mingw32_HOST_OS
+encodeBS = L.pack . decodeW8NUL
+#else
+encodeBS = L8.fromString
 #endif
 
 {- Converts a [Word8] to a FilePath, encoding using the filesystem encoding.
@@ -109,12 +126,12 @@ decodeW8 = s2w8 . _encodeFilePath
 
 {- Like encodeW8 and decodeW8, but NULs are passed through unchanged. -}
 encodeW8NUL :: [Word8] -> FilePath
-encodeW8NUL = join nul . map encodeW8 . split (s2w8 nul)
+encodeW8NUL = intercalate nul . map encodeW8 . split (s2w8 nul)
   where
 	nul = ['\NUL']
 
 decodeW8NUL :: FilePath -> [Word8]
-decodeW8NUL = join (s2w8 nul) . map decodeW8 . split nul
+decodeW8NUL = intercalate (s2w8 nul) . map decodeW8 . split nul
   where
 	nul = ['\NUL']
 

@@ -6,6 +6,7 @@
  -}
 
 {-# LANGUAGE PackageImports, CPP #-}
+{-# OPTIONS_GHC -fno-warn-tabs #-}
 
 module Utility.Path where
 
@@ -16,6 +17,7 @@ import Data.List
 import Data.Maybe
 import Data.Char
 import Control.Applicative
+import Prelude
 
 #ifdef mingw32_HOST_OS
 import qualified System.FilePath.Posix as Posix
@@ -28,8 +30,8 @@ import qualified "MissingH" System.Path as MissingH
 import Utility.Monad
 import Utility.UserInfo
 
-{- Simplifies a path, removing any ".." or ".", and removing the trailing
- - path separator.
+{- Simplifies a path, removing any "." component, collapsing "dir/..", 
+ - and removing the trailing path separator.
  -
  - On Windows, preserves whichever style of path separator might be used in
  - the input FilePaths. This is done because some programs in Windows
@@ -48,7 +50,8 @@ simplifyPath path = dropTrailingPathSeparator $
 
 	norm c [] = reverse c
 	norm c (p:ps)
-		| p' == ".." = norm (drop 1 c) ps
+		| p' == ".." && not (null c) && dropTrailingPathSeparator (c !! 0) /= ".." = 
+			norm (drop 1 c) ps
 		| p' == "." = norm c ps
 		| otherwise = norm (p:c) ps
 	  where
@@ -86,7 +89,7 @@ parentDir = takeDirectory . dropTrailingPathSeparator
 upFrom :: FilePath -> Maybe FilePath
 upFrom dir
 	| length dirs < 2 = Nothing
-	| otherwise = Just $ joinDrive drive (join s $ init dirs)
+	| otherwise = Just $ joinDrive drive (intercalate s $ init dirs)
   where
 	-- on Unix, the drive will be "/" when the dir is absolute, otherwise ""
 	(drive, path) = splitDrive dir
@@ -146,7 +149,7 @@ relPathDirToFile from to = relPathDirToFileAbs <$> absPath from <*> absPath to
 relPathDirToFileAbs :: FilePath -> FilePath -> FilePath
 relPathDirToFileAbs from to
 	| takeDrive from /= takeDrive to = to
-	| otherwise = join s $ dotdots ++ uncommon
+	| otherwise = intercalate s $ dotdots ++ uncommon
   where
 	s = [pathSeparator]
 	pfrom = split s from
@@ -285,7 +288,6 @@ fileNameLengthLimit dir = do
 	if l <= 0
 		then return 255
 		else return $ minimum [l, 255]
-  where
 #endif
 
 {- Given a string that we'd like to use as the basis for FilePath, but that

@@ -14,14 +14,17 @@ import Git.Sha
 
 {- Gets the reflog for a given branch. -}
 get :: Branch -> Repo -> IO [Sha]
-get = get' []
+get b = getMulti [b]
 
-get' :: [CommandParam] -> Branch -> Repo -> IO [Sha]
-get' ps b = mapMaybe extractSha . lines <$$> pipeReadStrict ps'
+{- Gets reflogs for multiple branches. -}
+getMulti :: [Branch] -> Repo -> IO [Sha]
+getMulti bs = get' (map (Param . fromRef) bs)
+
+get' :: [CommandParam] -> Repo -> IO [Sha]
+get' ps = mapMaybe extractSha . lines <$$> pipeReadStrict ps'
   where
-	ps' = 
-		[ Param "log"
-		, Param "-g"
-		, Param "--format=%H"
-		, Param (fromRef b)
+	ps' = catMaybes
+		[ Just $ Param "log"
+		, Just $ Param "-g"
+		, Just $ Param "--format=%H"
 		] ++ ps
