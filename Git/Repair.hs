@@ -1,6 +1,6 @@
 {- git repository recovery
  -
- - Copyright 2013-2014 Joey Hess <joey@kitenet.net>
+ - Copyright 2013-2014 Joey Hess <id@joeyh.name>
  -
  - Licensed under the GNU GPL version 3 or higher.
  -}
@@ -99,7 +99,7 @@ retrieveMissingObjects :: FsckResults -> Maybe FilePath -> Repo -> IO FsckResult
 retrieveMissingObjects missing referencerepo r
 	| not (foundBroken missing) = return missing
 	| otherwise = withTmpDir "tmprepo" $ \tmpdir -> do
-		unlessM (boolSystem "git" [Params "init", File tmpdir]) $
+		unlessM (boolSystem "git" [Param "init", File tmpdir]) $
 			error $ "failed to create temp repository in " ++ tmpdir
 		tmpr <- Config.read =<< Construct.fromAbsPath tmpdir
 		stillmissing <- pullremotes tmpr (remotes r) fetchrefstags missing
@@ -140,7 +140,9 @@ retrieveMissingObjects missing referencerepo r
 		ps' = 
 			[ Param "fetch"
 			, Param fetchurl
-			, Params "--force --update-head-ok --quiet"
+			, Param "--force"
+			, Param "--update-head-ok"
+			, Param "--quiet"
 			] ++ ps
 		fetchr' = fetchr { gitGlobalOpts = gitGlobalOpts fetchr ++ nogc }
 		nogc = [ Param "-c", Param "gc.auto=0" ]
@@ -225,10 +227,13 @@ badBranches missing r = filterM isbad =<< getAllRefs r
  - Relies on packed refs being exploded before it's called.
  -}
 getAllRefs :: Repo -> IO [Ref]
-getAllRefs r = map toref <$> dirContentsRecursive refdir
-  where
-	refdir = localGitDir r </> "refs"
-	toref = Ref . relPathDirToFile (localGitDir r)
+getAllRefs r = getAllRefs' (localGitDir r </> "refs")
+
+getAllRefs' :: FilePath -> IO [Ref]
+getAllRefs' refdir = do
+	let topsegs = length (splitPath refdir) - 1
+	let toref = Ref . joinPath . drop topsegs . splitPath
+	map toref <$> dirContentsRecursive refdir
 
 explodePackedRefsFile :: Repo -> IO ()
 explodePackedRefsFile r = do
@@ -241,7 +246,7 @@ explodePackedRefsFile r = do
   where
 	makeref (sha, ref) = do
 		let dest = localGitDir r </> fromRef ref
-		createDirectoryIfMissing True (takeDirectory dest)
+		createDirectoryIfMissing True (parentDir dest)
 		unlessM (doesFileExist dest) $
 			writeFile dest (fromRef sha)
 
@@ -336,7 +341,7 @@ verifyTree :: MissingObjects -> Sha -> Repo -> IO Bool
 verifyTree missing treesha r
 	| S.member treesha missing = return False
 	| otherwise = do
-		(ls, cleanup) <- pipeNullSplit (LsTree.lsTreeParams treesha) r
+		(ls, cleanup) <- pipeNullSplit (LsTree.lsTreeParams treesha []) r
 		let objshas = map (extractSha . LsTree.sha . LsTree.parseLsTree) ls
 		if any isNothing objshas || any (`S.member` missing) (catMaybes objshas)
 			then do

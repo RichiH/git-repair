@@ -1,7 +1,7 @@
 {- Some git commands output encoded filenames, in a rather annoyingly complex
  - C-style encoding.
  -
- - Copyright 2010, 2011 Joey Hess <joey@kitenet.net>
+ - Copyright 2010, 2011 Joey Hess <id@joeyh.name>
  -
  - Licensed under the GNU GPL version 3 or higher.
  -}
@@ -24,5 +24,5 @@ encode :: FilePath -> String
 encode s = "\"" ++ encode_c s ++ "\""
 
 {- for quickcheck -}
-prop_idempotent_deencode :: String -> Bool
-prop_idempotent_deencode s = s == decode (encode s)
+prop_isomorphic_deencode :: String -> Bool
+prop_isomorphic_deencode s = s == decode (encode s)

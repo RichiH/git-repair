@@ -1,28 +1,30 @@
 {- misc utility functions
  -
- - Copyright 2010-2011 Joey Hess <joey@kitenet.net>
+ - Copyright 2010-2011 Joey Hess <id@joeyh.name>
  -
  - License: BSD-2-clause
  -}
 
 {-# LANGUAGE CPP #-}
+{-# OPTIONS_GHC -fno-warn-tabs #-}
 
 module Utility.Misc where
+
+import Utility.FileSystemEncoding
+import Utility.Monad
 
 import System.IO
 import Control.Monad
 import Foreign
 import Data.Char
 import Data.List
-import Control.Applicative
 import System.Exit
 #ifndef mingw32_HOST_OS
 import System.Posix.Process (getAnyProcessStatus)
 import Utility.Exception
 #endif
-
-import Utility.FileSystemEncoding
-import Utility.Monad
+import Control.Applicative
+import Prelude
 
 {- A version of hgetContents that is not lazy. Ensures file is 
  - all read before it gets closed. -}
@@ -134,7 +136,7 @@ hGetSomeString h sz = do
  - if this reap gets there first. -}
 reapZombies :: IO ()
 #ifndef mingw32_HOST_OS
-reapZombies = do
+reapZombies =
 	-- throws an exception when there are no child processes
 	catchDefaultIO Nothing (getAnyProcessStatus False True)
 		>>= maybe (return ()) (const reapZombies)

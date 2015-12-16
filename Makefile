@@ -8,7 +8,7 @@ build: Build/SysConfig.hs
 
 Build/SysConfig.hs: configure.hs Build/TestConfig.hs Build/Configure.hs
 	if [ "$(CABAL)" = ./Setup ]; then ghc --make Setup; fi
-	$(CABAL) configure
+	$(CABAL) configure --ghc-options="$(shell Build/collect-ghc-options.sh)"
 
 install: build
 	install -d $(DESTDIR)$(PREFIX)/bin

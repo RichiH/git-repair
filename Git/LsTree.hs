@@ -1,6 +1,6 @@
 {- git ls-tree interface
  -
- - Copyright 2011 Joey Hess <joey@kitenet.net>
+ - Copyright 2011 Joey Hess <id@joeyh.name>
  -
  - Licensed under the GNU GPL version 3 or higher.
  -}
@@ -13,16 +13,15 @@ module Git.LsTree (
 	parseLsTree
 ) where
 
-import Numeric
-import Control.Applicative
-import System.Posix.Types
-
 import Common
 import Git
 import Git.Command
 import Git.Sha
 import Git.FilePath
 import qualified Git.Filename
+
+import Numeric
+import System.Posix.Types
 
 data TreeItem = TreeItem
 	{ mode :: FileMode
@@ -35,16 +34,30 @@ data TreeItem = TreeItem
  - with lazy output. -}
 lsTree :: Ref -> Repo -> IO [TreeItem]
 lsTree t repo = map parseLsTree
-	<$> pipeNullSplitZombie (lsTreeParams t) repo
+	<$> pipeNullSplitZombie (lsTreeParams t []) repo
 
-lsTreeParams :: Ref -> [CommandParam]
-lsTreeParams t = [ Params "ls-tree --full-tree -z -r --", File $ fromRef t ]
+lsTreeParams :: Ref -> [CommandParam] -> [CommandParam]
+lsTreeParams r ps =
+	[ Param "ls-tree"
+	, Param "--full-tree"
+	, Param "-z"
+	, Param "-r"
+	] ++ ps ++
+	[ Param "--"
+	, File $ fromRef r
+	]
 
 {- Lists specified files in a tree. -}
 lsTreeFiles :: Ref -> [FilePath] -> Repo -> IO [TreeItem]
 lsTreeFiles t fs repo = map parseLsTree <$> pipeNullSplitStrict ps repo
   where
-	ps = [Params "ls-tree --full-tree -z --", File $ fromRef t] ++ map File fs
+	ps =
+		[ Param "ls-tree"
+		, Param "--full-tree"
+		, Param "-z"
+		, Param "--"
+		, File $ fromRef t
+		] ++ map File fs
 
 {- Parses a line of ls-tree output.
  - (The --long format is not currently supported.) -}

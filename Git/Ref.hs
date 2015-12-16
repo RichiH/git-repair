@@ -1,6 +1,6 @@
 {- git ref stuff
  -
- - Copyright 2011-2013 Joey Hess <joey@kitenet.net>
+ - Copyright 2011-2013 Joey Hess <id@joeyh.name>
  -
  - Licensed under the GNU GPL version 3 or higher.
  -}
@@ -87,6 +87,9 @@ sha branch repo = process <$> showref repo
 		Param $ fromRef branch]
 	process [] = Nothing
 	process s = Just $ Ref $ firstLine s
+
+headSha :: Repo -> IO (Maybe Sha)
+headSha = sha headRef
 
 {- List of (shas, branches) matching a given ref or refs. -}
 matching :: [Ref] -> Repo -> IO [(Sha, Branch)]

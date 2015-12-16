@@ -21,7 +21,6 @@ import Utility.Tmp
 
 import qualified Data.ByteString as B
 import Data.Word
-import System.PosixCompat.Types
 
 {- Ways to damange a git repository. -}
 data Damage

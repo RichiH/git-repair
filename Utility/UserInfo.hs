@@ -1,11 +1,12 @@
 {- user info
  -
- - Copyright 2012 Joey Hess <joey@kitenet.net>
+ - Copyright 2012 Joey Hess <id@joeyh.name>
  -
  - License: BSD-2-clause
  -}
 
 {-# LANGUAGE CPP #-}
+{-# OPTIONS_GHC -fno-warn-tabs #-}
 
 module Utility.UserInfo (
 	myHomeDir,
@@ -13,12 +14,13 @@ module Utility.UserInfo (
 	myUserGecos,
 ) where
 
+import Utility.Env
+
 import System.PosixCompat
 #ifndef mingw32_HOST_OS
 import Control.Applicative
 #endif
-
-import Utility.Env
+import Prelude
 
 {- Current user's home directory.
  -

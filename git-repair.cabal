@@ -1,5 +1,5 @@
 Name: git-repair
-Version: 1.20150106
+Version: 1.20151215
 Cabal-Version: >= 1.8
 License: GPL
 Maintainer: Joey Hess <joey@kitenet.net>
@@ -28,7 +28,7 @@ Flag network-uri
 
 Executable git-repair
   Main-Is: git-repair.hs
-  GHC-Options: -Wall -threaded
+  GHC-Options: -threaded -Wall -fno-warn-tabs
   Build-Depends: MissingH, hslogger, directory, filepath, containers, mtl,
    unix-compat, bytestring, exceptions (>= 0.6), transformers,
    base >= 4.5, base < 5, IfElse, text, process, time, QuickCheck,

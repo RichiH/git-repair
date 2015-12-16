@@ -1,3 +1,11 @@
+git-repair (1.20151215) unstable; urgency=medium
+
+  * Fix insecure temporary permissions and potential denial of
+    service attack when creating temp dirs. Closes: #807341
+  * Merge from git-annex.
+
+ -- Joey Hess <id@joeyh.name>  Tue, 15 Dec 2015 20:47:59 -0400
+
 git-repair (1.20150106-2) unstable; urgency=medium
 
   * Fix typo in description
@@ -15,7 +23,7 @@ git-repair (1.20150106-1) unstable; urgency=medium
 
 git-repair (1.20150106) unstable; urgency=medium
 
-  * Debian package is now maintained by Gergely Nagy.
+  * Debian package is now maintained by Richard Hartmann.
   * Fix build with process 1.2.1.0.
   * Merge from git-annex.
 

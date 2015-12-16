@@ -1,6 +1,6 @@
 {- Construction of Git Repo objects
  -
- - Copyright 2010-2012 Joey Hess <joey@kitenet.net>
+ - Copyright 2010-2012 Joey Hess <id@joeyh.name>
  -
  - Licensed under the GNU GPL version 3 or higher.
  -}
@@ -19,8 +19,8 @@ module Git.Construct (
 	fromRemotes,
 	fromRemoteLocation,
 	repoAbsPath,
-	newFrom,
 	checkForRepo,
+	newFrom,
 ) where
 
 #ifndef mingw32_HOST_OS
@@ -45,10 +45,10 @@ fromCwd = getCurrentDirectory >>= seekUp
 	seekUp dir = do
 		r <- checkForRepo dir
 		case r of
-			Nothing -> case parentDir dir of
+			Nothing -> case upFrom dir of
 				Nothing -> return Nothing
 				Just d -> seekUp d
-			Just loc -> Just <$> newFrom loc
+			Just loc -> pure $ Just $ newFrom loc
 
 {- Local Repo constructor, accepts a relative or absolute path. -}
 fromPath :: FilePath -> IO Repo
@@ -58,24 +58,29 @@ fromPath dir = fromAbsPath =<< absPath dir
  - specified. -}
 fromAbsPath :: FilePath -> IO Repo
 fromAbsPath dir
-	| absoluteGitPath dir = ifM (doesDirectoryExist dir') ( ret dir' , hunt )
+	| absoluteGitPath dir = hunt
 	| otherwise =
 		error $ "internal error, " ++ dir ++ " is not absolute"
   where
-	ret = newFrom . LocalUnknown
-	{- Git always looks for "dir.git" in preference to
-	 - to "dir", even if dir ends in a "/". -}
+	ret = pure . newFrom . LocalUnknown
 	canondir = dropTrailingPathSeparator dir
-	dir' = canondir ++ ".git"
 	{- When dir == "foo/.git", git looks for "foo/.git/.git",
 	 - and failing that, uses "foo" as the repository. -}
 	hunt
 		| (pathSeparator:".git") `isSuffixOf` canondir =
 			ifM (doesDirectoryExist $ dir </> ".git")
 				( ret dir
-				, ret $ takeDirectory canondir
+				, ret (takeDirectory canondir)
 				)
-		| otherwise = ret dir
+		| otherwise = ifM (doesDirectoryExist dir)
+			( ret dir
+			-- git falls back to dir.git when dir doesn't
+			-- exist, as long as dir didn't end with a
+			-- path separator
+			, if dir == canondir
+				then ret (dir ++ ".git")
+				else ret dir
+			)
 
 {- Remote Repo constructor. Throws exception on invalid url.
  -
@@ -90,13 +95,13 @@ fromUrl url
 fromUrlStrict :: String -> IO Repo
 fromUrlStrict url
 	| startswith "file://" url = fromAbsPath $ unEscapeString $ uriPath u
-	| otherwise = newFrom $ Url u
+	| otherwise = pure $ newFrom $ Url u
   where
 	u = fromMaybe bad $ parseURI url
 	bad = error $ "bad url " ++ url
 
 {- Creates a repo that has an unknown location. -}
-fromUnknown :: IO Repo
+fromUnknown :: Repo
 fromUnknown = newFrom Unknown
 
 {- Converts a local Repo into a remote repo, using the reference repo
@@ -153,7 +158,7 @@ fromRemoteLocation s repo = gen $ parseRemoteLocation s repo
 fromRemotePath :: FilePath -> Repo -> IO Repo
 fromRemotePath dir repo = do
 	dir' <- expandTilde dir
-	fromAbsPath $ repoPath repo </> dir'
+	fromPath $ repoPath repo </> dir'
 
 {- Git remotes can have a directory that is specified relative
  - to the user's home directory, or that contains tilde expansions.
@@ -223,8 +228,8 @@ checkForRepo dir =
 		gitdirprefix = "gitdir: "
 	gitSignature file = doesFileExist $ dir </> file
 
-newFrom :: RepoLocation -> IO Repo
-newFrom l = return Repo
+newFrom :: RepoLocation -> Repo
+newFrom l = Repo
 	{ location = l
 	, config = M.empty
 	, fullconfig = M.empty
@@ -233,5 +238,4 @@ newFrom l = return Repo
 	, gitEnv = Nothing
 	, gitGlobalOpts = []
 	}
-
 
