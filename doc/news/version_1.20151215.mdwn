@@ -1,0 +1,5 @@
+git-repair 1.20151215 released with [[!toggle text="these changes"]]
+[[!toggleable text="""
+   * Fix insecure temporary permissions and potential denial of
+     service attack when creating temp dirs. Closes: #[807341](http://bugs.debian.org/807341)
+   * Merge from git-annex."""]]
