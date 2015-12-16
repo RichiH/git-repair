@@ -1,3 +1,9 @@
+git-repair (1.20151215-1) unstable; urgency=medium
+
+  * Package 1.20151215-1
+
+ -- Richard Hartmann <richih@debian.org>  Wed, 16 Dec 2015 07:26:04 +0100
+
 git-repair (1.20151215) unstable; urgency=medium
 
   * Fix insecure temporary permissions and potential denial of
